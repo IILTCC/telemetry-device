@@ -10,104 +10,76 @@ namespace telemetry_device_main.decryptor
 {
     public class IcdPacketDecryptor<IcdType> where IcdType : IBaseIcd
     {
-        public IcdPacketDecryptor()
-        {
+        public IcdPacketDecryptor() { }
 
-        }
-
-        public void printByteArray(byte[] array)
-        {
-            foreach (var item in array)
-            {
-                Console.Write(Convert.ToString(item, 2).PadLeft(8, '0')+" ");
-            }
-            Console.WriteLine();
-        }
-
-        public byte[] StringToByteArray(string packet)
-        {
-            byte[] retValue = new byte[packet.Length / 8];
-            string temp = "";
-            int counter = 0;
-            foreach (var item in packet)
-            {
-                temp += item;
-                if (temp.Length == 8)
-                {
-                    retValue[counter++] = Convert.ToByte(temp, 2);
-                    temp = "";
-                }
-            }
-            return retValue;
-        }
+        // takes a icd row the entire packet and returnes accurate byte array of the required row
         private byte[] GetAccurateValue(IcdType row, byte[] packet)
         {
-           
             byte[] retValue = new byte[row.GetSize() / 8 + (row.GetSize() % 8 != 0 ? 1 : 0)];
             for (int i = 0; i < retValue.Length; i++)
                 retValue[i] = packet[row.GetLocation() + i];
 
             return retValue;
         }
+        // masks the bit of required row
         private void ProcessMask(string mask,ref byte rowValue)
         {
             if (mask == string.Empty)
                 return;
             byte maskByte = Convert.ToByte(mask, 2);
+
+            // leave only required bits
             rowValue = (byte)(rowValue &maskByte);
+
+            // push the bits to the start
             while((maskByte & 0b00000001) == 0 )
             {
                 rowValue = (byte)(rowValue >> 1);
                 maskByte = (byte)(maskByte >> 1);
             }
         }
-        private int ConvertByteArrayToInt(byte[] byteArray,bool isSigned)
+        private int ConvertByteArrayToInt(byte[] byteArray,bool isNegative)
         {
+            // base for int 32 requires 4 byte array
             byte[] retvalue = new byte[4];
-            if(isSigned)
+
+            // if the integer is negative needs to be initialized with 1
+            if(isNegative)
                 retvalue = new byte[]{ 255,255,255,255};
             int index = 0;
             foreach (byte oneByte in byteArray)
                 retvalue[index++] = oneByte;
             return BitConverter.ToInt32(retvalue,0);
-
         }
 
+        // determines if current value in packet is a negative value
+        private bool IsNegative(IcdType row,byte[] rowValue)
+        {
+            // cheks if icd is sigend or unsigned
+            if (row.GetMax() < 0 || row.GetMin() < 0)
+                if ((rowValue[0] & 0b10000000) >0) // checks msb
+                    return true;
+            return false;
+        }
+        // generates the entire dictionary
         private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int, bool)> icdParameters, byte[] packet)
         {
             foreach (IcdType row in icdRows)
             {
-                Console.WriteLine("--------------------");
+                // get the exact byte array of the row
                 byte[] rowValue = GetAccurateValue(row, packet);
-                Console.WriteLine("id " + row.GetRowId());
-                Console.WriteLine("name "+row.GetName());
-                Console.WriteLine("size " + row.GetSize());
-                Console.WriteLine("min " + row.GetMin());
-                Console.WriteLine("max " + row.GetMax());
-                Console.Write("mask ");
-                printByteArray(StringToByteArray(row.GetMask()));
-                printByteArray(rowValue);
-                ProcessMask(row.GetMask(), ref rowValue[0]);
-                Console.Write("after mask ");
-                printByteArray(rowValue);
-                Console.WriteLine(ConvertByteArrayToInt(rowValue, row.GetMin() < 0|| row.GetMax()<0));
-                //Console.WriteLine("final"+ BitConverter.ToInt32(rowValue,0));
-                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, row.GetMin() < 0 || row.GetMax() < 0),false);
 
+                // mask the byte array
+                ProcessMask(row.GetMask(), ref rowValue[0]);
+
+                // add it to the dictionary
+                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row,rowValue)),false);
             }
         }
-        public void PrintDictionary(Dictionary<string,(int,bool)> dict)
-        {
-            foreach(var item in dict.Keys)
-            {
-                Console.WriteLine("key "+item +" equals "+dict[item].Item1+" "+dict[item].Item2);
-            }
-        }
-            
 
         public Dictionary<string,(int,bool)> DecryptPacket(byte[] packet, string json)
         {
-            Console.WriteLine("packet size " + packet.Length);
+            // bool in dictionary is for error detection
             Dictionary<string, (int,bool)> icdParameters = new Dictionary<string, (int,bool)>();
             List<IcdType> icdRows;
             try
@@ -119,7 +91,6 @@ namespace telemetry_device_main.decryptor
                 return null;
             }
             GenerateParameters(icdRows, ref icdParameters, packet);
-            PrintDictionary(icdParameters);
             return icdParameters;
         }
     }
