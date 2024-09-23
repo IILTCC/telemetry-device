@@ -80,6 +80,7 @@ namespace telemetry_device_main.decryptor
                 Console.WriteLine("--------------------");
                 byte[] rowValue = GetAccurateValue(row, packet);
                 Console.WriteLine("id " + row.GetRowId());
+                Console.WriteLine("name "+row.GetName());
                 Console.WriteLine("size " + row.GetSize());
                 Console.WriteLine("min " + row.GetMin());
                 Console.WriteLine("max " + row.GetMax());
@@ -95,6 +96,14 @@ namespace telemetry_device_main.decryptor
 
             }
         }
+        public void PrintDictionary(Dictionary<string,(int,bool)> dict)
+        {
+            foreach(var item in dict.Keys)
+            {
+                Console.WriteLine("key "+item +" equals "+dict[item].Item1+" "+dict[item].Item2);
+            }
+        }
+            
 
         public Dictionary<string,(int,bool)> DecryptPacket(byte[] packet, string json)
         {
@@ -110,7 +119,7 @@ namespace telemetry_device_main.decryptor
                 return null;
             }
             GenerateParameters(icdRows, ref icdParameters, packet);
-
+            PrintDictionary(icdParameters);
             return icdParameters;
         }
     }
