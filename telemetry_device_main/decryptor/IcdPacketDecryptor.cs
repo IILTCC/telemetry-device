@@ -11,27 +11,26 @@ namespace telemetry_device_main.decryptor
     public class IcdPacketDecryptor<IcdType> where IcdType : IBaseIcd
     {
         public IcdPacketDecryptor() { }
+        const int BYTE_LENGTH = 8;
 
-        // takes a icd row the entire packet and returnes accurate byte array of the required row
+        // takes a icd row the entire packet and returnes accurate byte array of correct length
         private byte[] GetAccurateValue(IcdType row, byte[] packet)
         {
-            byte[] retValue = new byte[row.GetSize() / 8 + (row.GetSize() % 8 != 0 ? 1 : 0)];
+            int retValueSize = row.GetSize() / BYTE_LENGTH + (row.GetSize() % BYTE_LENGTH != 0 ? 1 : 0);
+            byte[] retValue = new byte[retValueSize];
             for (int i = 0; i < retValue.Length; i++)
                 retValue[i] = packet[row.GetLocation() + i];
 
             return retValue;
         }
-        // masks the bit of required row
-        private void ProcessMask(string mask,ref byte rowValue)
+        private void CreateMask(string mask,ref byte rowValue)
         {
             if (mask == string.Empty)
                 return;
             byte maskByte = Convert.ToByte(mask, 2);
 
-            // leave only required bits
             rowValue = (byte)(rowValue &maskByte);
 
-            // push the bits to the start
             while((maskByte & 0b00000001) == 0 )
             {
                 rowValue = (byte)(rowValue >> 1);
@@ -52,7 +51,6 @@ namespace telemetry_device_main.decryptor
             return BitConverter.ToInt32(retvalue,0);
         }
 
-        // determines if current value in packet is a negative value
         private bool IsNegative(IcdType row,byte[] rowValue)
         {
             // cheks if icd is sigend or unsigned
@@ -66,13 +64,10 @@ namespace telemetry_device_main.decryptor
         {
             foreach (IcdType row in icdRows)
             {
-                // get the exact byte array of the row
                 byte[] rowValue = GetAccurateValue(row, packet);
 
-                // mask the byte array
-                ProcessMask(row.GetMask(), ref rowValue[0]);
+                CreateMask(row.GetMask(), ref rowValue[0]);
 
-                // add it to the dictionary
                 icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row,rowValue)),false);
             }
         }
