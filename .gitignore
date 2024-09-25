@@ -1,6 +1,6 @@
 /telemetry_device_main/bin
 
-
+/testing_device
 /telemetry_device_main/.vs
 /telemetry_device_main/obj
 *.sln
