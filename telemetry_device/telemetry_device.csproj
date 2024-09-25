@@ -5,4 +5,8 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\telemetry_device_main\telemetry_device_main.csproj" />
+  </ItemGroup>
+
 </Project>

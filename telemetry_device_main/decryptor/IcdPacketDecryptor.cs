@@ -65,15 +65,21 @@ namespace telemetry_device_main.decryptor
             int corValue = -1;
             foreach (IcdType row in icdRows)
             {
-                byte[] rowByteValue = GetAccurateValue(row, packet);
-                CreateMask(row.GetMask(), ref rowByteValue[0]);
-                int rowIntValue = ConvertByteArrayToInt(rowByteValue, IsNegative(row, rowByteValue));
-                if (corValue != -1 && corValue != row.GetCorrValue())
-                    continue;
-                if (row.IsRowCorIdentifier())
-                        corValue = rowIntValue;
+                Console.WriteLine(row);
+                byte[] rowValue = GetAccurateValue(row, packet);
+                Console.WriteLine(rowValue.Length);
+                CreateMask(row.GetMask(), ref rowValue[0]);
 
-                icdParameters[row.GetName()] = (rowIntValue,false);
+                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue)), false);
+                //byte[] rowByteValue = GetAccurateValue(row, packet);
+                //CreateMask(row.GetMask(), ref rowByteValue[0]);
+                //int rowIntValue = ConvertByteArrayToInt(rowByteValue, IsNegative(row, rowByteValue));
+                //if (corValue != -1 && corValue != row.GetCorrValue())
+                //    continue;
+                //if (row.IsRowCorIdentifier())
+                //        corValue = rowIntValue;
+
+                //icdParameters[row.GetName()] = (rowIntValue,false);
             }
         }
 
@@ -90,6 +96,7 @@ namespace telemetry_device_main.decryptor
             {
                 return null;
             }
+
             GenerateParameters(icdRows, ref icdParameters, packet);
             return icdParameters;
         }
