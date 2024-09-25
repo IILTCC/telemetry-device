@@ -1,5 +1,7 @@
 /telemetry_device_main/bin
-
+/telemetry_device/.vs
+/telemetry_device/obj
+/telemetry_device/bin
 /testing_device
 /telemetry_device_main/.vs
 /telemetry_device_main/obj
