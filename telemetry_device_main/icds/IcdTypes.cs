@@ -8,10 +8,10 @@ namespace telemetry_device_main.icds
 {
     public enum IcdTypes
     {
-        FlightBoxDown,
-        FlightBoxUp,
-        FiberBoxDown,
-        FiberBoxUp
+        FlightBoxDownIcd,
+        FlightBoxUpIcd,
+        FiberBoxDownIcd,
+        FiberBoxUpIcd
     }
     
 }

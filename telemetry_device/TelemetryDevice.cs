@@ -16,16 +16,17 @@ namespace telemetry_device
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private Dictionary<IcdTypes, (Type, string)> IcdDictionary;
+        private Dictionary<IcdTypes, Type> IcdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
         public TelemetryDevice()
         {
-            this.IcdDictionary = new Dictionary<IcdTypes, (Type, string)>();
-            IcdDictionary.Add(IcdTypes.FlightBoxDown, (typeof(FlightBoxIcd), "FlightBoxUpIcd"));
-            IcdDictionary.Add(IcdTypes.FlightBoxUp, (typeof(FlightBoxIcd), "FlightboxUpIcd"));
-            IcdDictionary.Add(IcdTypes.FiberBoxDown, (typeof(FiberBoxIcd), "FiberBoxDownIcd"));
-            IcdDictionary.Add(IcdTypes.FiberBoxUp, (typeof(FiberBoxIcd), "FiberBoxUpIcd"));
+            this.IcdDictionary = new Dictionary<IcdTypes, Type>();
+            IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, typeof(FlightBoxIcd));
+            IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, typeof(FlightBoxIcd));
+            IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, typeof(FiberBoxIcd));
+            IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, typeof(FiberBoxIcd));
+
         }
         public async Task ConnectAsync()
         {
@@ -40,15 +41,16 @@ namespace telemetry_device
             await ConnectAsync();
 
             Task.Run(() => { ListenForPackets(); });
+            // prevents program from ending
             await Task.Delay(-1);
         }
         public void ProccessPackets(IcdTypes type, byte[]packet)
         {
-            Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[type].Item1);
+            Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[type]);
             dynamic icdInstance = Activator.CreateInstance(genericIcdType);
             try
             {
-                string jsonText = File.ReadAllText(REPO_PATH + IcdDictionary[type].Item2 + FILE_TYPE);
+                string jsonText = File.ReadAllText(REPO_PATH + type.ToString() + FILE_TYPE);
                 Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packet, jsonText);
             }
             catch (Exception ex)
@@ -56,6 +58,7 @@ namespace telemetry_device
                 return;
             }
         }
+
         public async Task ListenForPackets()
         {
             byte[] packetData = new byte[8192];
@@ -73,7 +76,6 @@ namespace telemetry_device
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
 
                 ProccessPackets((IcdTypes)type, receivedPacket);
-                
             }
         }
     }
