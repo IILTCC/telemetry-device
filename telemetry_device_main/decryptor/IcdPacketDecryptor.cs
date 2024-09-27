@@ -62,13 +62,13 @@ namespace telemetry_device_main.decryptor
         // generates the entire dictionary
         private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int, bool)> icdParameters, byte[] packet)
         {
+            int corValue = -1;
             foreach (IcdType row in icdRows)
             {
                 byte[] rowValue = GetAccurateValue(row, packet);
-
                 CreateMask(row.GetMask(), ref rowValue[0]);
 
-                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row,rowValue)),false);
+                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue)), false);
             }
         }
 
@@ -85,6 +85,7 @@ namespace telemetry_device_main.decryptor
             {
                 return null;
             }
+
             GenerateParameters(icdRows, ref icdParameters, packet);
             return icdParameters;
         }
