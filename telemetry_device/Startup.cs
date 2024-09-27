@@ -10,8 +10,8 @@ namespace telemetry_device
     {
         static async Task Main(string[] args)
         {
-            TelemetryDevice td = new TelemetryDevice();
-            await td.RunAsync();
+            TelemetryDevice telemetryDevice = new TelemetryDevice();
+            await telemetryDevice.RunAsync();
         }
 
     }
