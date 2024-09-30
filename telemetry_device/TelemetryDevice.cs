@@ -53,7 +53,7 @@ namespace telemetry_device
                 string jsonText = File.ReadAllText(REPO_PATH + type.ToString() + FILE_TYPE);
                 Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packet, jsonText);
             }
-            catch (Exception)
+            catch (Exception )
             {
                 return;
             }
@@ -62,7 +62,6 @@ namespace telemetry_device
         public async Task ListenForPackets()
         {
             byte[] packetData = new byte[8192];
-            int counter = 0;
             while (true)
             {
                 // get inital data of the packet pos 0,1 size and 2 type of packet
