@@ -65,9 +65,15 @@ namespace telemetry_device_main.decryptor
             int corValue = -1;
             foreach (IcdType row in icdRows)
             {
+                if (row.GetCorrValue() != -1 && corValue != row.GetCorrValue())
+                    continue;
+
                 byte[] rowValue = GetAccurateValue(row, packet);
                 CreateMask(row.GetMask(), ref rowValue[0]);
 
+                if (row.IsRowCorIdentifier())
+                    corValue = ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue));
+                
                 icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue)), false);
             }
         }
@@ -87,6 +93,7 @@ namespace telemetry_device_main.decryptor
             }
 
             GenerateParameters(icdRows, ref icdParameters, packet);
+                
             return icdParameters;
         }
     }
