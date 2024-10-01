@@ -53,7 +53,7 @@ namespace telemetry_device
                 string jsonText = File.ReadAllText(REPO_PATH + type.ToString() + FILE_TYPE);
                 Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packet, jsonText);
             }
-            catch (Exception )
+            catch (Exception ex)
             {
                 return;
             }

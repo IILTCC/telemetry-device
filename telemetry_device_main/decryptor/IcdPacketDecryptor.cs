@@ -63,20 +63,18 @@ namespace telemetry_device_main.decryptor
         private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int, bool)> icdParameters, byte[] packet)
         {
             int corValue = -1;
-            foreach (IcdType row in icdRows)
+            foreach (IcdType icdType in icdRows)
             {
-                if (row.GetLocation() == -1)
-                    continue;
-                if (row.GetCorrValue() != -1 && corValue != row.GetCorrValue())
+                if (icdType.GetLocation() == -1 || (icdType.GetCorrValue() != -1 && corValue != icdType.GetCorrValue()))
                     continue;
 
-                byte[] rowValue = GetAccurateValue(row, packet);
-                CreateMask(row.GetMask(), ref rowValue[0]);
+                byte[] rowValue = GetAccurateValue(icdType, packet);
+                CreateMask(icdType.GetMask(), ref rowValue[0]);
 
-                if (row.IsRowCorIdentifier())
-                    corValue = ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue));
+                if (icdType.IsRowCorIdentifier())
+                    corValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
                 
-                icdParameters[row.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(row, rowValue)), false);
+                icdParameters[icdType.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue)), false);
             }
         }
 
@@ -89,7 +87,7 @@ namespace telemetry_device_main.decryptor
             {
                 icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return null;
             }
