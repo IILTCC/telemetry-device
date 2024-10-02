@@ -4,10 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using telemetry_device_main.icds;
 
 namespace simulator_main.icd
 {
-    public class FlightBoxIcd : IBaseIcd
+    public class FlightBoxUpIcd : IBaseIcd
     {
         public int Location { get; set; }
         public string Mask { get; set; }
@@ -31,9 +32,6 @@ namespace simulator_main.icd
         public bool IsRowCorIdentifier() { return false; }
         
         public int GetRowId() { return this.Id; }
-       
 
-        
-        
     }
 }

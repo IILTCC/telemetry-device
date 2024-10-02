@@ -17,21 +17,28 @@ namespace telemetry_device
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private Dictionary<IcdTypes, (Type,string)> IcdDictionary;
+        private Dictionary<IcdTypes, (dynamic,string)> IcdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
         ConcurrentQueue<(IcdTypes, byte[])> packetQueue;
         public TelemetryDevice()
         {
-            this.IcdDictionary = new Dictionary<IcdTypes, (Type, string)>();
-            //foreach(IcdTypes type in Enum.GetValues(typeof(IcdTypes)))
-            //{
-            //    IcdDictionary.Add(type,(typeof(type))
-            //}
-            IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, (typeof(FlightBoxIcd), ""));
-            IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, (typeof(FlightBoxIcd), ""));
-            IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, (typeof(FiberBoxIcd), ""));
-            IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, (typeof(FiberBoxIcd), ""));
+            this.IcdDictionary = new Dictionary<IcdTypes, (dynamic, string)>();
+            (IcdTypes,Type)[] icdTypes = new (IcdTypes, Type)[4] {
+                (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
+                (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
+                (IcdTypes.FlightBoxDownIcd, typeof(FlightBoxDownIcd)),
+                (IcdTypes.FlightBoxUpIcd, typeof(FlightBoxUpIcd))};
+            foreach((IcdTypes,Type) type in icdTypes)
+            {
+                string jsonText = File.ReadAllText(REPO_PATH + type.Item1.ToString() + FILE_TYPE);
+                Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(type.Item2);
+                IcdDictionary.Add(type.Item1,(Activator.CreateInstance(genericIcdType), jsonText));
+            }
+            //IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, (typeof(FlightBoxIcd),""));
+            //IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, (typeof(FlightBoxIcd),""));
+            //IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, (typeof(FiberBoxIcd),""));
+            //IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, (typeof(FiberBoxIcd),""));
             packetQueue = new ConcurrentQueue<(IcdTypes, byte[])>();
         }
         public async Task ConnectAsync()
@@ -63,15 +70,15 @@ namespace telemetry_device
 
                     packetQueue.TryDequeue(out packetData);
                     Console.WriteLine("processing packet----------------------------------------------------------");
-                    Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[packetData.Item1].Item1);
-                    dynamic icdInstance = Activator.CreateInstance(genericIcdType);
                     try
                     {
-                        string jsonText = File.ReadAllText(REPO_PATH + packetData.Item1.ToString() + FILE_TYPE);
-                        Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, jsonText);
+                        dynamic icdInstance = IcdDictionary[packetData.Item1].Item1;
+                        //string jsonText = File.ReadAllText(REPO_PATH + packetData.Item1.ToString() + FILE_TYPE);
+                        Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, IcdDictionary[packetData.Item1].Item2);
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(ex);
                         return;
                     }
                 }

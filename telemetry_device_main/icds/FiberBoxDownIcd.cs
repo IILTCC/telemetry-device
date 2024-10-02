@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using telemetry_device_main.icds;
 
 namespace simulator_main.icd
 {
-    public class FiberBoxIcd : IBaseIcd
+    public class FiberBoxDownIcd : IBaseIcd
     {
         public int Id { get; set; }
         public string Error { get; set; }
@@ -26,7 +27,7 @@ namespace simulator_main.icd
         public string Enum { get; set; }
 
         public int GetRowId() { return this.Id; }
-        
+
         public int GetLocation()
         {
             if (this.Location == string.Empty)
