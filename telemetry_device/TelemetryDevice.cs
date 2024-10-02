@@ -35,10 +35,6 @@ namespace telemetry_device
                 Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(type.Item2);
                 IcdDictionary.Add(type.Item1,(Activator.CreateInstance(genericIcdType), jsonText));
             }
-            //IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, (typeof(FlightBoxIcd),""));
-            //IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, (typeof(FlightBoxIcd),""));
-            //IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, (typeof(FiberBoxIcd),""));
-            //IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, (typeof(FiberBoxIcd),""));
             packetQueue = new ConcurrentQueue<(IcdTypes, byte[])>();
         }
         public async Task ConnectAsync()
@@ -52,7 +48,9 @@ namespace telemetry_device
         public async Task RunAsync()
         {
             await ConnectAsync();
+            ThreadPool.SetMaxThreads(10, 10);
             Thread listenForPackets = new Thread(ProccessPackets);
+
             Task.Run(() => { ListenForPackets(); });
             listenForPackets.Start();
             // prevents program from ending
@@ -72,9 +70,9 @@ namespace telemetry_device
                     Console.WriteLine("processing packet----------------------------------------------------------");
                     try
                     {
-                        dynamic icdInstance = IcdDictionary[packetData.Item1].Item1;
-                        //string jsonText = File.ReadAllText(REPO_PATH + packetData.Item1.ToString() + FILE_TYPE);
-                        Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, IcdDictionary[packetData.Item1].Item2);
+                        Task.Run(()=>AnalayzePacket(packetData));
+                        //dynamic icdInstance = IcdDictionary[packetData.Item1].Item1;
+                        //Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, IcdDictionary[packetData.Item1].Item2);
                     }
                     catch (Exception ex)
                     {
@@ -82,11 +80,18 @@ namespace telemetry_device
                         return;
                     }
                 }
-                Thread.Sleep(200);
+                //Thread.Sleep(200);
 
             }
         }
-
+        public void AnalayzePacket((IcdTypes, byte[]) packetData)
+        {
+            Console.WriteLine("started analyzing 111111111111111111111111111111");
+            //Thread.Sleep(1000);
+            dynamic icdInstance = IcdDictionary[packetData.Item1].Item1;
+            Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, IcdDictionary[packetData.Item1].Item2);
+            Console.WriteLine("finished analyzing 00000000000000000000");
+        }
         public async Task ListenForPackets()
         {
             byte[] packetData = new byte[8192];
