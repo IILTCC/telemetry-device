@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
@@ -16,17 +17,22 @@ namespace telemetry_device
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private Dictionary<IcdTypes, Type> IcdDictionary;
+        private Dictionary<IcdTypes, (Type,string)> IcdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
+        ConcurrentQueue<(IcdTypes, byte[])> packetQueue;
         public TelemetryDevice()
         {
-            this.IcdDictionary = new Dictionary<IcdTypes, Type>();
-            IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, typeof(FlightBoxIcd));
-            IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, typeof(FlightBoxIcd));
-            IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, typeof(FiberBoxIcd));
-            IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, typeof(FiberBoxIcd));
-
+            this.IcdDictionary = new Dictionary<IcdTypes, (Type, string)>();
+            //foreach(IcdTypes type in Enum.GetValues(typeof(IcdTypes)))
+            //{
+            //    IcdDictionary.Add(type,(typeof(type))
+            //}
+            IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, (typeof(FlightBoxIcd), ""));
+            IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, (typeof(FlightBoxIcd), ""));
+            IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, (typeof(FiberBoxIcd), ""));
+            IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, (typeof(FiberBoxIcd), ""));
+            packetQueue = new ConcurrentQueue<(IcdTypes, byte[])>();
         }
         public async Task ConnectAsync()
         {
@@ -39,23 +45,38 @@ namespace telemetry_device
         public async Task RunAsync()
         {
             await ConnectAsync();
-
+            Thread listenForPackets = new Thread(ProccessPackets);
             Task.Run(() => { ListenForPackets(); });
+            listenForPackets.Start();
             // prevents program from ending
             await Task.Delay(-1);
         }
-        public void ProccessPackets(IcdTypes type, byte[]packet)
+        public void ProccessPackets()
         {
-            Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[type]);
-            dynamic icdInstance = Activator.CreateInstance(genericIcdType);
-            try
+            while (true)
             {
-                string jsonText = File.ReadAllText(REPO_PATH + type.ToString() + FILE_TYPE);
-                Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packet, jsonText);
-            }
-            catch (Exception ex)
-            {
-                return;
+                Console.WriteLine(packetQueue.Count);
+                if (packetQueue.Count > 0)
+                {
+
+                    (IcdTypes, byte[]) packetData;
+
+                    packetQueue.TryDequeue(out packetData);
+                    Console.WriteLine("processing packet----------------------------------------------------------");
+                    Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[packetData.Item1].Item1);
+                    dynamic icdInstance = Activator.CreateInstance(genericIcdType);
+                    try
+                    {
+                        string jsonText = File.ReadAllText(REPO_PATH + packetData.Item1.ToString() + FILE_TYPE);
+                        Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, jsonText);
+                    }
+                    catch (Exception ex)
+                    {
+                        return;
+                    }
+                }
+                Thread.Sleep(200);
+
             }
         }
 
@@ -75,7 +96,10 @@ namespace telemetry_device
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
 
-                ProccessPackets((IcdTypes)type, receivedPacket);
+
+                Console.WriteLine("received packet");
+                
+                packetQueue.Enqueue(((IcdTypes)type,receivedPacket));
             }
         }
     }
