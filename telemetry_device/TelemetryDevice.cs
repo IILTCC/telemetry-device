@@ -69,7 +69,7 @@ namespace telemetry_device
                 byte[] size = new byte[2];
                 size[0] = packetData[0];
                 size[1] = packetData[1];
-                int type = packetData[3];
+                int type = packetData[2];
 
                 // receive the entire final packet
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
