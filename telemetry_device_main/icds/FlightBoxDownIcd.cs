@@ -1,13 +1,13 @@
-﻿using simulator_main.icd;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace simulator_main.icd
+namespace telemetry_device_main.icds
 {
-    public class FlightBoxIcd : IBaseIcd
+    public class FlightBoxDownIcd : IBaseIcd
     {
         public int Location { get; set; }
         public string Mask { get; set; }

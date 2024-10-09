@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace simulator_main.icd
+namespace telemetry_device_main.icds
 {
     public interface IBaseIcd
     {
