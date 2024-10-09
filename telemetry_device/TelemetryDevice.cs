@@ -14,8 +14,7 @@ namespace telemetry_device
 {
     class TelemetryDevice
     {
-        private BufferBlock<BufferBlockItem> _sourceBlock;
-        private TransformBlock<BufferBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
+        private PipelineProcess _pipeLine;
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
@@ -24,12 +23,8 @@ namespace telemetry_device
         const string REPO_PATH = "../../../icd_repo/";
         public TelemetryDevice()
         {
-            _sourceBlock = new BufferBlock<BufferBlockItem>();
-            _decryptBlock = new TransformBlock<BufferBlockItem, Dictionary<string, (int,bool)>>(ProccessPackets);
-            //ActionBlock<Dictionary<string, PacketItem>> sendBlock = new ActionBlock<Dictionary<string, PacketItem>>();
-
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, IcdDictionaryItem>();
-
+            _pipeLine = new PipelineProcess();
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
                 (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
@@ -42,7 +37,6 @@ namespace telemetry_device
                 Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
                 _icdDictionary.TryAdd(icdInitialization.Item1, new IcdDictionaryItem(Activator.CreateInstance(genericIcdType), jsonText));
             }
-            _sourceBlock.LinkTo(_decryptBlock);
         }
         public async Task ConnectAsync()
         {
@@ -60,20 +54,7 @@ namespace telemetry_device
             // prevents program from ending
             await Task.Delay(-1);
         }
-        public Dictionary<string,(int,bool)> ProccessPackets(BufferBlockItem bufferItem)
-        {            
-            try
-            {
-                dynamic icdInstance = _icdDictionary[bufferItem.IcdType].IcdObject;
-                Dictionary<string, (int, bool)> decryptedParamDict = icdInstance.DecryptPacket(bufferItem.PacketData, _icdDictionary[bufferItem.IcdType].IcdJson);
-                Console.WriteLine("proccessed packet");
-                return decryptedParamDict;
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
-        }
+
 
         public async Task ListenForPackets()
         {
@@ -91,7 +72,8 @@ namespace telemetry_device
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
 
-                _sourceBlock.Post(new BufferBlockItem(receivedPacket, (IcdTypes)type));
+                _pipeLine.PushToBuffer(new BufferBlockItem(receivedPacket, _icdDictionary[(IcdTypes)type].IcdObject));
+                //_sourceBlock.Post(new BufferBlockItem(receivedPacket, (IcdTypes)type));
             }
         }
     }

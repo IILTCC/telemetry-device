@@ -9,13 +9,13 @@ namespace telemetry_device.compactCollection
 {
     class BufferBlockItem
     {
-        public BufferBlockItem(byte[] packetData, IcdTypes icdType)
+        public BufferBlockItem(byte[] packetData, dynamic icdDecryptObject)
         {
             this.PacketData = packetData;
-            this.IcdType = icdType;
+            this.IcdDecryptObject = icdDecryptObject;
         }
 
         public byte[] PacketData { get; set; }
-        public IcdTypes IcdType { get; set; }
+        public dynamic IcdDecryptObject { get; set; }
     }
 }
