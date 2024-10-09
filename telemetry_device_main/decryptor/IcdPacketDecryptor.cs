@@ -1,10 +1,10 @@
 ﻿using Newtonsoft.Json;
-using simulator_main.icd;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace simulator_main.icd
+namespace telemetry_device_main.icds
 {
-    public class FiberBoxIcd : IBaseIcd
+    public class FiberBoxDownIcd : IBaseIcd
     {
         public int Id { get; set; }
         public string Error { get; set; }

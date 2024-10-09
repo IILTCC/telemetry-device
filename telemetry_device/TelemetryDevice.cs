@@ -1,5 +1,4 @@
-﻿using simulator_main.icd;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,26 +6,43 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
+using telemetry_device.compactCollection;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 namespace telemetry_device
 {
     class TelemetryDevice
     {
+        private BufferBlock<BufferBlockItem> _sourceBlock;
+        private TransformBlock<BufferBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private Dictionary<IcdTypes, Type> IcdDictionary;
+        private ConcurrentDictionary<IcdTypes, IcdDictionaryItem> _icdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
         public TelemetryDevice()
         {
-            this.IcdDictionary = new Dictionary<IcdTypes, Type>();
-            IcdDictionary.Add(IcdTypes.FlightBoxDownIcd, typeof(FlightBoxIcd));
-            IcdDictionary.Add(IcdTypes.FlightBoxUpIcd, typeof(FlightBoxIcd));
-            IcdDictionary.Add(IcdTypes.FiberBoxDownIcd, typeof(FiberBoxIcd));
-            IcdDictionary.Add(IcdTypes.FiberBoxUpIcd, typeof(FiberBoxIcd));
+            _sourceBlock = new BufferBlock<BufferBlockItem>();
+            _decryptBlock = new TransformBlock<BufferBlockItem, Dictionary<string, (int,bool)>>(ProccessPackets);
+            //ActionBlock<Dictionary<string, PacketItem>> sendBlock = new ActionBlock<Dictionary<string, PacketItem>>();
 
+            this._icdDictionary = new ConcurrentDictionary<IcdTypes, IcdDictionaryItem>();
+
+            (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
+                (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
+                (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
+                (IcdTypes.FlightBoxDownIcd, typeof(FlightBoxDownIcd)),
+                (IcdTypes.FlightBoxUpIcd, typeof(FlightBoxUpIcd))};
+
+            foreach ((IcdTypes, Type) icdInitialization in icdTypes)
+            {
+                string jsonText = File.ReadAllText(REPO_PATH + icdInitialization.Item1.ToString() + FILE_TYPE);
+                Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
+                _icdDictionary.TryAdd(icdInitialization.Item1, new IcdDictionaryItem(Activator.CreateInstance(genericIcdType), jsonText));
+            }
+            _sourceBlock.LinkTo(_decryptBlock);
         }
         public async Task ConnectAsync()
         {
@@ -44,18 +60,18 @@ namespace telemetry_device
             // prevents program from ending
             await Task.Delay(-1);
         }
-        public void ProccessPackets(IcdTypes type, byte[]packet)
-        {
-            Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(IcdDictionary[type]);
-            dynamic icdInstance = Activator.CreateInstance(genericIcdType);
+        public Dictionary<string,(int,bool)> ProccessPackets(BufferBlockItem bufferItem)
+        {            
             try
             {
-                string jsonText = File.ReadAllText(REPO_PATH + type.ToString() + FILE_TYPE);
-                Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packet, jsonText);
+                dynamic icdInstance = _icdDictionary[bufferItem.IcdType].IcdObject;
+                Dictionary<string, (int, bool)> decryptedParamDict = icdInstance.DecryptPacket(bufferItem.PacketData, _icdDictionary[bufferItem.IcdType].IcdJson);
+                Console.WriteLine("proccessed packet");
+                return decryptedParamDict;
             }
             catch (Exception ex)
             {
-                return;
+                return null;
             }
         }
 
@@ -75,7 +91,7 @@ namespace telemetry_device
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
 
-                ProccessPackets((IcdTypes)type, receivedPacket);
+                _sourceBlock.Post(new BufferBlockItem(receivedPacket, (IcdTypes)type));
             }
         }
     }
