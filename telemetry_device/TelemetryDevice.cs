@@ -14,7 +14,7 @@ namespace telemetry_device
 {
     class TelemetryDevice
     {
-        private PipelineProcess _pipeLine;
+        private PipeLine _pipeLine;
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
@@ -25,7 +25,7 @@ namespace telemetry_device
         {
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
 
-            _pipeLine = new PipelineProcess();
+            _pipeLine = new PipeLine();
 
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),

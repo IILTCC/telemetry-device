@@ -8,15 +8,15 @@ using telemetry_device.compactCollection;
 
 namespace telemetry_device
 {
-    class PipelineProcess
+    class PipeLine
     {
-        private BufferBlock<BufferBlockItem> _sourceBlock;
+        private BufferBlock<BufferBlockItem> _pullerBlock;
         private TransformBlock<BufferBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
-        public PipelineProcess()
+        public PipeLine()
         {
-            _sourceBlock = new BufferBlock<BufferBlockItem>();
+            _pullerBlock = new BufferBlock<BufferBlockItem>();
             _decryptBlock = new TransformBlock<BufferBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
-            _sourceBlock.LinkTo(_decryptBlock);
+            _pullerBlock.LinkTo(_decryptBlock);
         }
 
         public Dictionary<string, (int, bool)> ProccessPackets(BufferBlockItem bufferItem)
@@ -33,7 +33,7 @@ namespace telemetry_device
         }
         public void PushToBuffer(BufferBlockItem blockItem)
         {
-            this._sourceBlock.Post(blockItem);
+            this._pullerBlock.Post(blockItem);
         }
     }
 }
