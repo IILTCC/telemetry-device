@@ -8,23 +8,25 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using telemetry_device.compactCollection;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 namespace telemetry_device
 {
     class TelemetryDevice
     {
+        const int MAX_THREADPOOL_SIZE = 10;
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private ConcurrentDictionary<IcdTypes, (dynamic,string)> IcdDictionary;
+        private ConcurrentDictionary<IcdTypes, IcdDictionaryItem> _icdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
-        private ConcurrentQueue<(IcdTypes, byte[])> PacketQueue;
+        private ConcurrentQueue<PacketQueueItem> _packetQueue;
 
         public TelemetryDevice()
         {
-            this.IcdDictionary = new ConcurrentDictionary<IcdTypes, (dynamic, string)>();
+            this._icdDictionary = new ConcurrentDictionary<IcdTypes, IcdDictionaryItem>();
 
             (IcdTypes,Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
@@ -32,15 +34,14 @@ namespace telemetry_device
                 (IcdTypes.FlightBoxDownIcd, typeof(FlightBoxDownIcd)),
                 (IcdTypes.FlightBoxUpIcd, typeof(FlightBoxUpIcd))};
 
-            // intializing on cretion all types of IcdPacketDecryptor
-            foreach((IcdTypes,Type) icdDescript in icdTypes)
+            foreach((IcdTypes,Type) icdInitialization in icdTypes)
             {
-                string jsonText = File.ReadAllText(REPO_PATH + icdDescript.Item1.ToString() + FILE_TYPE);
-                Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdDescript.Item2);
-                IcdDictionary.TryAdd(icdDescript.Item1,(Activator.CreateInstance(genericIcdType), jsonText));
+                string jsonText = File.ReadAllText(REPO_PATH + icdInitialization.Item1.ToString() + FILE_TYPE);
+                Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
+                _icdDictionary.TryAdd(icdInitialization.Item1,new IcdDictionaryItem(Activator.CreateInstance(genericIcdType), jsonText));
             }
 
-            PacketQueue = new ConcurrentQueue<(IcdTypes, byte[])>();
+            _packetQueue = new ConcurrentQueue<PacketQueueItem>();
         }
 
         public async Task ConnectAsync()
@@ -54,7 +55,7 @@ namespace telemetry_device
         public async Task RunAsync()
         {
             await ConnectAsync();
-            ThreadPool.SetMaxThreads(10, 10);
+            ThreadPool.SetMaxThreads(MAX_THREADPOOL_SIZE, MAX_THREADPOOL_SIZE);
 
             Thread proccessPacket = new Thread(ProccessPackets);
             Thread listenPacket = new Thread(ListenForPackets);
@@ -67,11 +68,10 @@ namespace telemetry_device
         {
             while (true)
             {
-                Console.WriteLine(PacketQueue.Count);
-                if (PacketQueue.Count > 0)
+                if (_packetQueue.Count > 0)
                 {
-                    (IcdTypes, byte[]) packetData;
-                    PacketQueue.TryDequeue(out packetData);
+                    PacketQueueItem packetData;
+                    _packetQueue.TryDequeue(out packetData);
                     try
                     {
                         // split work between worker thread on threadpool
@@ -84,10 +84,10 @@ namespace telemetry_device
                 }
             }
         }
-        public void AnalayzePacket((IcdTypes, byte[]) packetData)
+        public void AnalayzePacket(PacketQueueItem packetData)
         {
-            dynamic icdInstance = IcdDictionary[packetData.Item1].Item1;
-            Dictionary<string, (int, bool)> retDict = icdInstance.DecryptPacket(packetData.Item2, IcdDictionary[packetData.Item1].Item2);
+            dynamic icdInstance = _icdDictionary[packetData.IcdType].IcdObject;
+            Dictionary<string, (int, bool)> decryptedParamDict = icdInstance.DecryptPacket(packetData.PacketData, _icdDictionary[packetData.IcdType].IcdJson);
         }
         public async void ListenForPackets()
         {
@@ -105,7 +105,7 @@ namespace telemetry_device
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
                 
-                PacketQueue.Enqueue(((IcdTypes)type,receivedPacket));
+                _packetQueue.Enqueue(new PacketQueueItem((IcdTypes)type,receivedPacket));
             }
         }
     }
