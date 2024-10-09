@@ -10,7 +10,20 @@ namespace telemetry_device_main.decryptor
 {
     public class IcdPacketDecryptor<IcdType> where IcdType : IBaseIcd
     {
-        public IcdPacketDecryptor() { }
+        private List<IcdType> _icdRows;
+
+        public IcdPacketDecryptor(string json) 
+        {
+            List<IcdType> icdRows;
+            try
+            {
+                _icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
+            }
+            catch (Exception ex)
+            {
+                return;
+            }
+        }
         const int BYTE_LENGTH = 8;
 
         // takes a icd row the entire packet and returnes accurate byte array of correct length
@@ -78,21 +91,12 @@ namespace telemetry_device_main.decryptor
             }
         }
 
-        public Dictionary<string,(int,bool)> DecryptPacket(byte[] packet, string json)
+        public Dictionary<string,(int,bool)> DecryptPacket(byte[] packet)
         {
             // bool in dictionary is for error detection
             Dictionary<string, (int,bool)> icdParameters = new Dictionary<string, (int,bool)>();
-            List<IcdType> icdRows;
-            try
-            {
-                icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
 
-            GenerateParameters(icdRows, ref icdParameters, packet);
+            GenerateParameters(_icdRows, ref icdParameters, packet);
 
             return icdParameters;
         }
