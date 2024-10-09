@@ -18,13 +18,15 @@ namespace telemetry_device
         const int PORT = 50000;
         TcpClient simulator;
         NetworkStream stream;
-        private ConcurrentDictionary<IcdTypes, IcdDictionaryItem> _icdDictionary;
+        private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
         public TelemetryDevice()
         {
-            this._icdDictionary = new ConcurrentDictionary<IcdTypes, IcdDictionaryItem>();
+            this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
+
             _pipeLine = new PipelineProcess();
+
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
                 (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
@@ -35,7 +37,7 @@ namespace telemetry_device
             {
                 string jsonText = File.ReadAllText(REPO_PATH + icdInitialization.Item1.ToString() + FILE_TYPE);
                 Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
-                _icdDictionary.TryAdd(icdInitialization.Item1, new IcdDictionaryItem(Activator.CreateInstance(genericIcdType), jsonText));
+                _icdDictionary.TryAdd(icdInitialization.Item1, Activator.CreateInstance(genericIcdType, new object[] { jsonText}));
             }
         }
         public async Task ConnectAsync()
@@ -72,8 +74,7 @@ namespace telemetry_device
                 byte[] receivedPacket = new byte[BitConverter.ToInt16(size)];
                 await stream.ReadAsync(receivedPacket, 0, BitConverter.ToInt16(size));
 
-                _pipeLine.PushToBuffer(new BufferBlockItem(receivedPacket, _icdDictionary[(IcdTypes)type].IcdObject));
-                //_sourceBlock.Post(new BufferBlockItem(receivedPacket, (IcdTypes)type));
+                _pipeLine.PushToBuffer(new BufferBlockItem(receivedPacket, _icdDictionary[(IcdTypes)type]));
             }
         }
     }

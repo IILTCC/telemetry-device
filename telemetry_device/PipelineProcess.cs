@@ -17,14 +17,13 @@ namespace telemetry_device
             _sourceBlock = new BufferBlock<BufferBlockItem>();
             _decryptBlock = new TransformBlock<BufferBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
             _sourceBlock.LinkTo(_decryptBlock);
-
         }
+
         public Dictionary<string, (int, bool)> ProccessPackets(BufferBlockItem bufferItem)
         {
             try
             {
-                Dictionary<string, (int, bool)> decryptedParamDict = bufferItem.IcdDecryptObject.DecryptPacket(bufferItem.PacketData, _icdDictionary[bufferItem.IcdType].IcdJson);
-                Console.WriteLine("proccessed packet");
+                Dictionary<string, (int, bool)> decryptedParamDict = bufferItem.IcdDecryptObject.DecryptPacket(bufferItem.PacketData);
                 return decryptedParamDict;
             }
             catch (Exception ex)
