@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SharpPcap" Version="6.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\telemetry_device_main\telemetry_device_main.csproj" />
   </ItemGroup>
 
