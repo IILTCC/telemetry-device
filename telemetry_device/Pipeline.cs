@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
@@ -15,6 +16,7 @@ namespace telemetry_device
 {
     class PipeLine
     {
+        public bool canGo = true;
         private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
         const int SIMULATOR_DEST_PORT = 50_000;
 
@@ -58,56 +60,69 @@ namespace telemetry_device
         }
         private TransformBlockItem PeelPacket(BufferBlockItem bufferBlockItem)
         {
-            
+            var packet = Packet.ParsePacket(bufferBlockItem.PacketLayer, bufferBlockItem.PacketCap);
 
-
-                var packet = Packet.ParsePacket(bufferBlockItem.PacketLayer, bufferBlockItem.PacketCap);
-
-                var ipPacket = packet.Extract<IPPacket>();
-                if (ipPacket.Protocol == ProtocolType.Udp)
+            var ipPacket = packet.Extract<IPPacket>();
+            if (ipPacket.Protocol == ProtocolType.Udp)
+            {
+                Console.WriteLine("----------------------------");
+                var udpPacket = packet.Extract<UdpPacket>();
+                Console.WriteLine("dest prot " + udpPacket.DestinationPort);
+                Console.WriteLine("src port " + udpPacket.SourcePort);
+                //Console.WriteLine("==================" + udpPacket.PayloadData);
+                if (udpPacket.DestinationPort == SIMULATOR_DEST_PORT)
                 {
-                    Console.WriteLine("----------------------------");
-                    var udpPacket = packet.Extract<UdpPacket>();
-                    Console.WriteLine("dest prot " + udpPacket.DestinationPort);
-                    Console.WriteLine("src port " + udpPacket.SourcePort);
-                    //Console.WriteLine("==================" + udpPacket.PayloadData);
-                    if (udpPacket.DestinationPort == SIMULATOR_DEST_PORT)
-                    {
 
-                        printBytes(udpPacket.PayloadData);
-                        Console.WriteLine() ;
-                        byte[] packetData = new byte[udpPacket.PayloadData.Length - 3];
-                        for (int i = 0; i < packetData.Length; i++)
-                            packetData[i] = udpPacket.PayloadData[i + 3];
-                        printBytes(packetData);
-                        int type = udpPacket.PayloadData[2];
-                        Console.WriteLine("type " + (IcdTypes)type);
-                        return new TransformBlockItem((IcdTypes)type, packetData);
-                    }
+                    printBytes(udpPacket.PayloadData);
+                    Console.WriteLine();
+                    byte[] packetData = new byte[udpPacket.PayloadData.Length - 3];
+                    for (int i = 0; i < packetData.Length; i++)
+                        packetData[i] = udpPacket.PayloadData[i + 3];
+                    printBytes(packetData);
+                    int type = udpPacket.PayloadData[2];
+                    Console.WriteLine("type " + (IcdTypes)type);
+                    return new TransformBlockItem((IcdTypes)type, packetData);
                 }
-                // need to add fileter
-                return new TransformBlockItem(IcdTypes.FiberBoxDownIcd, null);
-            
+            }
+            // need to add fileter
+            return new TransformBlockItem(IcdTypes.FiberBoxDownIcd, null);
+        }
+        public void printDict(Dictionary<string, (int, bool)> dict)
+        {
+            foreach (var item in dict.Keys)
+                Console.WriteLine(item.PadRight(20) + " " + dict[item].Item1 + " " + dict[item].Item2);
         }
         public Dictionary<string, (int, bool)> ProccessPackets(TransformBlockItem transformItem)
         {
+
+
+
             if (transformItem.PacketData == null)
+            {
+                canGo = true;
                 return null;
+            }
             try
             {
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
                 //return null;
-                Console.WriteLine("decrypted");
+                printDict(decryptedParamDict);
+                canGo = true;
                 return decryptedParamDict;
             }
             catch (Exception ex)
             {
+                canGo = true;
                 return null;
             }
         }
         public void PushToBuffer(BufferBlockItem blockItem)
         {
-            this._pullerBlock.Post(blockItem);
+            if(canGo)
+            {
+                canGo = false;
+                this._pullerBlock.Post(blockItem);
+            }
         }
     }
 }
