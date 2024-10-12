@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PacketDotNet;
+using SharpPcap;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,13 +11,16 @@ namespace telemetry_device.compactCollection
 {
     class BufferBlockItem
     {
-        public BufferBlockItem(byte[] packetData, dynamic icdDecryptObject)
+
+        public BufferBlockItem(byte[] packetCap, LinkLayers packetLayer)
         {
-            this.PacketData = packetData;
-            this.IcdDecryptObject = icdDecryptObject;
+            this.PacketLayer = packetLayer;
+            this.PacketCap = packetCap;
+            //this.IcdDecryptObject = icdDecryptObject;
         }
 
-        public byte[] PacketData { get; set; }
-        public dynamic IcdDecryptObject { get; set; }
+        public byte[] PacketCap { get; set; }
+        public LinkLayers PacketLayer { get; set; }
+        //public dynamic IcdDecryptObject { get; set; }
     }
 }
