@@ -16,27 +16,32 @@ namespace telemetry_device
 {
     class PipeLine
     {
-        public bool canGo = true;
         private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
         const int SIMULATOR_DEST_PORT = 50_000;
 
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
-        private BufferBlock<BufferBlockItem> _pullerBlock;
-        private TransformBlock<BufferBlockItem, TransformBlockItem> _peelPacket;
+
+        private ActionBlock<Packet> _disposedPackets;
+        private BufferBlock<Packet> _pullerBlock;
+        private TransformBlock<Packet, TransformBlockItem> _peelPacket;
         private TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
         public PipeLine()
         {
-
-
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
-            _peelPacket = new TransformBlock<BufferBlockItem, TransformBlockItem>(PeelPacket, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 1 }); ;
-            _pullerBlock = new BufferBlock<BufferBlockItem>(new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 1 }); ;
-            _decryptBlock = new TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 1 }); ;
-            _pullerBlock.LinkTo(_peelPacket);
-            _peelPacket.LinkTo(_decryptBlock);
 
-            //_pullerBlock.LinkTo(_decryptBlock);
+            // acts as clearing buffer endpoint for unwanted packets
+            _disposedPackets = new ActionBlock<Packet>((Packet p) => { });
+
+            _peelPacket = new TransformBlock<Packet, TransformBlockItem>(PeelPacket);
+            _pullerBlock = new BufferBlock<Packet>();
+            _decryptBlock = new TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
+
+            // packets either continue to the rest of the blocks or stop at the action block
+            _pullerBlock.LinkTo(_peelPacket, FilterPacket);
+            _pullerBlock.LinkTo(_disposedPackets, (Packet p) => { return !FilterPacket(p); });
+
+            _peelPacket.LinkTo(_decryptBlock);
 
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
@@ -51,78 +56,49 @@ namespace telemetry_device
                 _icdDictionary.TryAdd(icdInitialization.Item1, Activator.CreateInstance(genericIcdType, new object[] { jsonText }));
             }
         }
-        public void printBytes(byte[] arr)
-        {
-            Console.WriteLine();
-            foreach (byte item in arr)
-                Console.Write(Convert.ToString(item, 2).PadLeft(8, '0') + " ");
-            Console.WriteLine();
-        }
-        private TransformBlockItem PeelPacket(BufferBlockItem bufferBlockItem)
-        {
-            var packet = Packet.ParsePacket(bufferBlockItem.PacketLayer, bufferBlockItem.PacketCap);
 
-            var ipPacket = packet.Extract<IPPacket>();
+        // returns true if includes correct dest port and correct protocol
+        private bool FilterPacket(Packet packet)
+        {
+            IPPacket ipPacket = packet.Extract<IPPacket>();
             if (ipPacket.Protocol == ProtocolType.Udp)
             {
-                Console.WriteLine("----------------------------");
-                var udpPacket = packet.Extract<UdpPacket>();
-                Console.WriteLine("dest prot " + udpPacket.DestinationPort);
-                Console.WriteLine("src port " + udpPacket.SourcePort);
-                //Console.WriteLine("==================" + udpPacket.PayloadData);
+                UdpPacket udpPacket = packet.Extract<UdpPacket>();
                 if (udpPacket.DestinationPort == SIMULATOR_DEST_PORT)
-                {
-
-                    printBytes(udpPacket.PayloadData);
-                    Console.WriteLine();
-                    byte[] packetData = new byte[udpPacket.PayloadData.Length - 3];
-                    for (int i = 0; i < packetData.Length; i++)
-                        packetData[i] = udpPacket.PayloadData[i + 3];
-                    printBytes(packetData);
-                    int type = udpPacket.PayloadData[2];
-                    Console.WriteLine("type " + (IcdTypes)type);
-                    return new TransformBlockItem((IcdTypes)type, packetData);
-                }
+                    return true;
             }
-            // need to add fileter
-            return new TransformBlockItem(IcdTypes.FiberBoxDownIcd, null);
+            return false;
         }
-        public void printDict(Dictionary<string, (int, bool)> dict)
+
+        private TransformBlockItem PeelPacket(Packet packet)
         {
-            foreach (var item in dict.Keys)
-                Console.WriteLine(item.PadRight(20) + " " + dict[item].Item1 + " " + dict[item].Item2);
+            var udpPacket = packet.Extract<UdpPacket>();
+
+            // remove header bytes
+            byte[] packetData = new byte[udpPacket.PayloadData.Length - 3];
+            for (int i = 0; i < packetData.Length; i++)
+                packetData[i] = udpPacket.PayloadData[i + 3];
+
+            int type = udpPacket.PayloadData[2];
+
+            return new TransformBlockItem((IcdTypes)type, packetData);
         }
+
         public Dictionary<string, (int, bool)> ProccessPackets(TransformBlockItem transformItem)
         {
-
-
-
-            if (transformItem.PacketData == null)
-            {
-                canGo = true;
-                return null;
-            }
             try
             {
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
-                //return null;
-                printDict(decryptedParamDict);
-                canGo = true;
                 return decryptedParamDict;
             }
             catch (Exception ex)
             {
-                canGo = true;
                 return null;
             }
         }
-        public void PushToBuffer(BufferBlockItem blockItem)
+        public void PushToBuffer(Packet packet)
         {
-            if(canGo)
-            {
-                canGo = false;
-                this._pullerBlock.Post(blockItem);
-            }
+            this._pullerBlock.Post(packet);
         }
     }
 }
