@@ -43,6 +43,11 @@ namespace telemetry_device
 
             _peelPacket.LinkTo(_decryptBlock);
 
+            InitializeIcdDictionary();
+        }
+
+        private void InitializeIcdDictionary()
+        {
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
                 (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
@@ -84,7 +89,7 @@ namespace telemetry_device
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
 
-        public Dictionary<string, (int, bool)> ProccessPackets(TransformBlockItem transformItem)
+        private Dictionary<string, (int, bool)> ProccessPackets(TransformBlockItem transformItem)
         {
             try
             {
