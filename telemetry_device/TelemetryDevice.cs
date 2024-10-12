@@ -63,29 +63,30 @@ namespace telemetry_device
         {
             //var udp = (UdpPacket) e.GetPacket().Ext
 
-            byte[] value = new byte[e.Data.Length];
+            byte[] rawBits = new byte[e.Data.Length];
             for (int i = 0; i < e.Data.Length; i++)
-                value[i] = e.Data[i];
-            var packet = Packet.ParsePacket(e.GetPacket().LinkLayerType, value);
+                rawBits[i] = e.Data[i];
+            var packet = Packet.ParsePacket(e.GetPacket().LinkLayerType, rawBits);
             
-            var ipPacket = packet.Extract<UdpPacket>(); // Extract the IP packet
-            var ipv4Packet = packet.Extract<IPv4Packet>();
-            var ipPacketip = packet.Extract<IPPacket>();
-            if(ipPacketip.Protocol == PacketDotNet.ProtocolType.Udp )
+            var ipPacket = packet.Extract<IPPacket>();
+            if(ipPacket.Protocol == PacketDotNet.ProtocolType.Udp )
             {
-                Console.WriteLine("=================="+ipPacket.PayloadData);
-                printBytes(ipPacket.PayloadData);
+                var udpPacket = packet.Extract<UdpPacket>();
+                Console.WriteLine("dest prot "+udpPacket.DestinationPort);
+                Console.WriteLine("src port "+udpPacket.SourcePort);
+                Console.WriteLine("=================="+ udpPacket.PayloadData);
+                if(udpPacket.DestinationPort == 50_000)
+                    printBytes(udpPacket.PayloadData);
             }
-            Console.WriteLine(ipv4Packet.Protocol);
-            Console.WriteLine(ipPacketip.Protocol);
             //var payloadData = ipPacket.PayloadData;
-            Console.WriteLine(packet.ToString());
-            Console.WriteLine(packet.BytesSegment);
-            Console.WriteLine(packet.TotalPacketLength);
-            Console.WriteLine(packet.Bytes);
-            Console.WriteLine(packet.HasPayloadData);
-            Console.WriteLine(packet.HasPayloadPacket);
-            Console.WriteLine(packet.PayloadPacket);
+            //Console.WriteLine(packet.ToString());
+            //Console.WriteLine(packet.BytesSegment);
+            //Console.WriteLine(packet.TotalPacketLength);
+            //Console.WriteLine(packet.Bytes);
+            //Console.WriteLine(packet.HasPayloadData);
+            //Console.WriteLine(packet.HasPayloadPacket);
+            Console.WriteLine("payload "+packet.PayloadPacket);
+            Console.WriteLine(ipPacket);
             //Console.WriteLine("packet {0}\n ip{1} payload{2}",packet,ipPacket, BitConverter.ToString(payloadData));
             Console.WriteLine();
         }
