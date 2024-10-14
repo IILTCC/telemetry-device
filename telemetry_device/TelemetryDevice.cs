@@ -1,4 +1,5 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Configuration;
+using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
@@ -21,8 +22,15 @@ namespace telemetry_device
         const string NETWORK_DEVICE_NAME = @"\Device\NPF_{026FB3A3-275B-4791-91BE-BB5CC388A4D7}";
 
         private PipeLine _pipeLine;
+        private readonly IConfiguration _configFile;
+
         public TelemetryDevice()
         {
+            var builder = new ConfigurationBuilder();
+            builder.SetBasePath(Directory.GetCurrentDirectory())
+                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+            _configFile = builder.Build();
             _pipeLine = new PipeLine();
         }
 
@@ -61,7 +69,7 @@ namespace telemetry_device
 
             device.OnPacketArrival += new PacketArrivalEventHandler(OnPacketArrival);
 
-            int readTimeoutMilliseconds = 1000;
+            int readTimeoutMilliseconds = Int32.Parse(_configFile["TelemetryDeviceSettings:TelemetryReadTimeout"]);
             device.Open(mode: DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.NoCaptureLocal, read_timeout: readTimeoutMilliseconds);
 
             device.StartCapture();

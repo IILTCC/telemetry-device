@@ -9,12 +9,12 @@ namespace telemetry_device.compactCollection
 {
     class TransformBlockItem
     {
+        public IcdTypes PacketType { get; set; }
+        public byte[] PacketData { get; set; }
         public TransformBlockItem(IcdTypes packetType, byte[] packetData)
         {
             this.PacketType = packetType;
             this.PacketData = packetData;
         }
-        public IcdTypes PacketType { get; set; }
-        public byte[] PacketData { get; set; }
     }
 }

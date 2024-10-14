@@ -1,4 +1,5 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Configuration;
+using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,31 +18,39 @@ namespace telemetry_device
     class PipeLine
     {
         private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
-        const int SIMULATOR_DEST_PORT = 50_000;
 
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
 
         private ActionBlock<Packet> _disposedPackets;
         private BufferBlock<Packet> _pullerBlock;
-        private TransformBlock<Packet, TransformBlockItem> _peelPacket;
+        private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
         private TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
+
+        private readonly IConfiguration _configFile;
+
         public PipeLine()
         {
+            var builder = new ConfigurationBuilder();
+            builder.SetBasePath(Directory.GetCurrentDirectory())
+                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+            _configFile = builder.Build();
+
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
 
             // acts as clearing buffer endpoint for unwanted packets
-            _disposedPackets = new ActionBlock<Packet>((Packet p) => { });
+            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { });
 
-            _peelPacket = new TransformBlock<Packet, TransformBlockItem>(PeelPacket);
+            _extractPacketData = new TransformBlock<Packet, TransformBlockItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
             _decryptBlock = new TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
 
             // packets either continue to the rest of the blocks or stop at the action block
-            _pullerBlock.LinkTo(_peelPacket, FilterPacket);
-            _pullerBlock.LinkTo(_disposedPackets, (Packet p) => { return !FilterPacket(p); });
+            _pullerBlock.LinkTo(_extractPacketData, FilterPacket);
+            _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !FilterPacket(packet); });
 
-            _peelPacket.LinkTo(_decryptBlock);
+            _extractPacketData.LinkTo(_decryptBlock);
 
             InitializeIcdDictionary();
         }
@@ -69,13 +78,13 @@ namespace telemetry_device
             if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                if (udpPacket.DestinationPort == SIMULATOR_DEST_PORT)
+                if (udpPacket.DestinationPort == Int32.Parse(_configFile["TelemetryDeviceSettings:SimulatorDestPort"]))
                     return true;
             }
             return false;
         }
 
-        private TransformBlockItem PeelPacket(Packet packet)
+        private TransformBlockItem ExtractPacketData(Packet packet)
         {
             var udpPacket = packet.Extract<UdpPacket>();
 
