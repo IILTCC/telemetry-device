@@ -22,16 +22,12 @@ namespace telemetry_device
         const string NETWORK_DEVICE_NAME = @"\Device\NPF_{026FB3A3-275B-4791-91BE-BB5CC388A4D7}";
 
         private PipeLine _pipeLine;
-        private readonly IConfiguration _configFile;
-
-        public TelemetryDevice()
+        private TelemetryDeviceSettings _telemetryDeviceSettings;
+        public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings)
         {
-            var builder = new ConfigurationBuilder();
-            builder.SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-            _configFile = builder.Build();
-            _pipeLine = new PipeLine();
+            _telemetryDeviceSettings = telemetryDeviceSettings;
+            _pipeLine = new PipeLine(_telemetryDeviceSettings);
         }
 
         public async Task RunAsync()
@@ -69,7 +65,7 @@ namespace telemetry_device
 
             device.OnPacketArrival += new PacketArrivalEventHandler(OnPacketArrival);
 
-            int readTimeoutMilliseconds = Int32.Parse(_configFile["TelemetryDeviceSettings:TelemetryReadTimeout"]);
+            int readTimeoutMilliseconds = _telemetryDeviceSettings.TelemetryReadTimeout;
             device.Open(mode: DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.NoCaptureLocal, read_timeout: readTimeoutMilliseconds);
 
             device.StartCapture();

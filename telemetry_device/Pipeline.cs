@@ -17,8 +17,6 @@ namespace telemetry_device
 {
     class PipeLine
     {
-        private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
-
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
 
@@ -27,15 +25,13 @@ namespace telemetry_device
         private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
         private TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
 
-        private readonly IConfiguration _configFile;
+        private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
 
-        public PipeLine()
+        private TelemetryDeviceSettings _telemetryDeviceSettings;
+
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings)
         {
-            var builder = new ConfigurationBuilder();
-            builder.SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-            _configFile = builder.Build();
+            _telemetryDeviceSettings = telemetryDeviceSettings;
 
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
 
@@ -78,7 +74,7 @@ namespace telemetry_device
             if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                if (udpPacket.DestinationPort == Int32.Parse(_configFile["TelemetryDeviceSettings:SimulatorDestPort"]))
+                if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
                     return true;
             }
             return false;
