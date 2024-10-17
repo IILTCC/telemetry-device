@@ -7,15 +7,14 @@ using telemetry_device_main.icds;
 
 namespace telemetry_device.compactCollection
 {
-    class BufferBlockItem
+    class TransformBlockItem
     {
-        public BufferBlockItem(byte[] packetData, dynamic icdDecryptObject)
-        {
-            this.PacketData = packetData;
-            this.IcdDecryptObject = icdDecryptObject;
-        }
-
+        public IcdTypes PacketType { get; set; }
         public byte[] PacketData { get; set; }
-        public dynamic IcdDecryptObject { get; set; }
+        public TransformBlockItem(IcdTypes packetType, byte[] packetData)
+        {
+            this.PacketType = packetType;
+            this.PacketData = packetData;
+        }
     }
 }
