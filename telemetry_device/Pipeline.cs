@@ -71,12 +71,17 @@ namespace telemetry_device
         private bool FilterPacket(Packet packet)
         {
             IPPacket ipPacket = packet.Extract<IPPacket>();
-            if (ipPacket.Protocol == ProtocolType.Udp)
+            if (ipPacket != null)
             {
-                UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
-                    return true;
+
+                if (ipPacket.Protocol == ProtocolType.Udp)
+                {
+                    UdpPacket udpPacket = packet.Extract<UdpPacket>();
+                    if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
+                        return true;
+                }
             }
+
             return false;
         }
 

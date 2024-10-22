@@ -72,6 +72,14 @@ namespace telemetry_device_main.decryptor
                     return true;
             return false;
         }
+
+        private bool CheckIfInBound(int value, IcdType row)
+        {
+            if (value <= row.GetMax() && value >= row.GetMin())
+                return false;
+            return true;
+        }
+
         // generates the entire dictionary
         private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int, bool)> icdParameters, byte[] packet)
         {
@@ -84,10 +92,12 @@ namespace telemetry_device_main.decryptor
                 byte[] rowValue = GetAccurateValue(icdType, packet);
                 CreateMask(icdType.GetMask(), ref rowValue[0]);
 
+                int finalValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
+
                 if (icdType.IsRowCorIdentifier())
-                    corValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
-                
-                icdParameters[icdType.GetName()] = (ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue)), false);
+                    corValue = finalValue;
+
+                icdParameters[icdType.GetName()] = (finalValue,CheckIfInBound(finalValue,icdType));
             }
         }
 
@@ -97,7 +107,6 @@ namespace telemetry_device_main.decryptor
             Dictionary<string, (int,bool)> icdParameters = new Dictionary<string, (int,bool)>();
 
             GenerateParameters(_icdRows, ref icdParameters, packet);
-
             return icdParameters;
         }
     }
