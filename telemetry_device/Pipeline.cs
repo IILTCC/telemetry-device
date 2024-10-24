@@ -43,8 +43,8 @@ namespace telemetry_device
             _decryptBlock = new TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
 
             // packets either continue to the rest of the blocks or stop at the action block
-            _pullerBlock.LinkTo(_extractPacketData, FilterPacket);
-            _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !FilterPacket(packet); });
+            _pullerBlock.LinkTo(_extractPacketData, IsPacketAppropriate);
+            _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !IsPacketAppropriate(packet); });
 
             _extractPacketData.LinkTo(_decryptBlock);
 
@@ -68,15 +68,20 @@ namespace telemetry_device
         }
 
         // returns true if includes correct dest port and correct protocol
-        private bool FilterPacket(Packet packet)
+        private bool IsPacketAppropriate(Packet packet)
         {
             IPPacket ipPacket = packet.Extract<IPPacket>();
-            if (ipPacket.Protocol == ProtocolType.Udp)
+            if (ipPacket != null)
             {
-                UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
-                    return true;
+
+                if (ipPacket.Protocol == ProtocolType.Udp)
+                {
+                    UdpPacket udpPacket = packet.Extract<UdpPacket>();
+                    if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
+                        return true;
+                }
             }
+
             return false;
         }
 
