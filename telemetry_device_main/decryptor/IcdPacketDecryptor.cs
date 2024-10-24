@@ -73,7 +73,7 @@ namespace telemetry_device_main.decryptor
             return false;
         }
 
-        private bool CheckIfInBound(int value, IcdType row)
+        private bool CheckIfInRange(int value, IcdType row)
         {
             if (value <= row.GetMax() && value >= row.GetMin())
                 return false;
@@ -97,7 +97,7 @@ namespace telemetry_device_main.decryptor
                 if (icdType.IsRowCorIdentifier())
                     corValue = finalValue;
 
-                icdParameters[icdType.GetName()] = (finalValue,CheckIfInBound(finalValue,icdType));
+                icdParameters[icdType.GetName()] = (finalValue,CheckIfInRange(finalValue,icdType));
             }
         }
 
