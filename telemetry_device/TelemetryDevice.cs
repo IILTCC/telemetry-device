@@ -26,7 +26,7 @@ namespace telemetry_device
         private KafkaConnection _kafkaConnection;
         public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings)
         {
-            _kafkaConnection = new KafkaConnection();
+            _kafkaConnection = new KafkaConnection(telemetryDeviceSettings);
             _kafkaConnection.WaitForKafkaConnection();
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);

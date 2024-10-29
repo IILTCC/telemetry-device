@@ -11,19 +11,18 @@ namespace telemetry_device
 {
     class KafkaConnection
     {
-        private const string KAFKA_URL = "localhost:9092";
         private IProducer<Null, string> _producer ;
         private IAdminClient _adminClient;
 
-        public KafkaConnection()
+        public KafkaConnection(TelemetryDeviceSettings telemetryDeviceSettings)
         {
             ProducerConfig producerConfig = new ProducerConfig
             {
-                BootstrapServers = KAFKA_URL
+                BootstrapServers = telemetryDeviceSettings.KafkaUrl
             };
             AdminClientConfig adminConfig = new AdminClientConfig
             {
-                BootstrapServers = KAFKA_URL
+                BootstrapServers = telemetryDeviceSettings.KafkaUrl
             };
             _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
             _adminClient = new AdminClientBuilder(adminConfig).Build();
