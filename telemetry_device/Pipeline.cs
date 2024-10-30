@@ -23,15 +23,18 @@ namespace telemetry_device
         private ActionBlock<Packet> _disposedPackets;
         private BufferBlock<Packet> _pullerBlock;
         private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
-        private TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>> _decryptBlock;
+        private TransformBlock<TransformBlockItem, SendToKafkaItem> _decryptBlock;
+        private ActionBlock<SendToKafkaItem> _sendToKafka;
 
         private ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
 
         private TelemetryDeviceSettings _telemetryDeviceSettings;
 
-        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings)
+        private KafkaConnection _kafkaConnection;
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
             _telemetryDeviceSettings = telemetryDeviceSettings;
+            _kafkaConnection = kafkaConnection;
 
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
 
@@ -40,17 +43,21 @@ namespace telemetry_device
 
             _extractPacketData = new TransformBlock<Packet, TransformBlockItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
-            _decryptBlock = new TransformBlock<TransformBlockItem, Dictionary<string, (int, bool)>>(ProccessPackets);
+            _decryptBlock = new TransformBlock<TransformBlockItem, SendToKafkaItem>(ProccessPackets);
+            _sendToKafka = new ActionBlock<SendToKafkaItem>(SendParamToKafka);
 
             // packets either continue to the rest of the blocks or stop at the action block
             _pullerBlock.LinkTo(_extractPacketData, IsPacketAppropriate);
             _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !IsPacketAppropriate(packet); });
 
             _extractPacketData.LinkTo(_decryptBlock);
-
+            _decryptBlock.LinkTo(_sendToKafka);
             InitializeIcdDictionary();
         }
-
+        private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
+        {
+            _kafkaConnection.SendToTopic(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+        }
         private void InitializeIcdDictionary()
         {
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
@@ -95,16 +102,15 @@ namespace telemetry_device
                 packetData[i] = udpPacket.PayloadData[i + 3];
 
             int type = udpPacket.PayloadData[2];
-
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
 
-        private Dictionary<string, (int, bool)> ProccessPackets(TransformBlockItem transformItem)
+        private SendToKafkaItem ProccessPackets(TransformBlockItem transformItem)
         {
             try
             {
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
-                return decryptedParamDict;
+                return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
             }
             catch (Exception ex)
             {

@@ -23,11 +23,13 @@ namespace telemetry_device
 
         private PipeLine _pipeLine;
         private TelemetryDeviceSettings _telemetryDeviceSettings;
+        private KafkaConnection _kafkaConnection;
         public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings)
         {
-
+            _kafkaConnection = new KafkaConnection(telemetryDeviceSettings);
+            _kafkaConnection.WaitForKafkaConnection();
             _telemetryDeviceSettings = telemetryDeviceSettings;
-            _pipeLine = new PipeLine(_telemetryDeviceSettings);
+            _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
         }
 
         public async Task RunAsync()
