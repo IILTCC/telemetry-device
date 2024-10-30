@@ -11,9 +11,10 @@ namespace telemetry_device_main.decryptor
     public class IcdPacketDecryptor<IcdType> where IcdType : IBaseIcd
     {
         private List<IcdType> _icdRows;
-
+        private DecryptorLogger _logger;
         public IcdPacketDecryptor(string json) 
         {
+            _logger = DecryptorLogger.Instance;
             List<IcdType> icdRows;
             try
             {
@@ -21,8 +22,10 @@ namespace telemetry_device_main.decryptor
             }
             catch (Exception ex)
             {
+                _logger.LogFatal("Tried to deseralize icd -"+ex.Message);
                 return;
             }
+            _logger.LogInfo("Succesfuly deserialized icd");
         }
         const int BYTE_LENGTH = 8;
 

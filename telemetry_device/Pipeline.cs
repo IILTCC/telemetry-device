@@ -31,8 +31,11 @@ namespace telemetry_device
         private TelemetryDeviceSettings _telemetryDeviceSettings;
 
         private KafkaConnection _kafkaConnection;
+        private TelemetryLogger _logger;
         public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
+            _logger = TelemetryLogger.Instance;
+
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
 
@@ -53,6 +56,7 @@ namespace telemetry_device
             _extractPacketData.LinkTo(_decryptBlock);
             _decryptBlock.LinkTo(_sendToKafka);
             InitializeIcdDictionary();
+            _logger.LogInfo("Succesfuly initalized all icds");
         }
         private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
         {
@@ -60,6 +64,7 @@ namespace telemetry_device
         }
         private void InitializeIcdDictionary()
         {
+            
             (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
                 (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
                 (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
@@ -114,6 +119,7 @@ namespace telemetry_device
             }
             catch (Exception ex)
             {
+                _logger.LogError("Tried decrypt and send to kafka -"+ex.Message);
                 return null;
             }
         }
