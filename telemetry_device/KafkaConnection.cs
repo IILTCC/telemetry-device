@@ -51,11 +51,11 @@ namespace telemetry_device
                 }
                 catch(KafkaException e)
                 {
-                    _logger.LogFatal(e.ToString());
+                    _logger.LogFatal("Tried connecting to kafka -"+e.Message);
                 }
                 catch(Exception e) 
                 {
-                    _logger.LogFatal(e.ToString());
+                    _logger.LogFatal("Tried connecting to kafka -" + e.Message);
                 }
             }
         }

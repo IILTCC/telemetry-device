@@ -11,7 +11,6 @@ namespace telemetry_device_main
 
         private DecryptorLogger()
         {
-            //LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(@"../../../../telemetry_device_main/bin\Debug\net5.0/nlog.config", true);
             _logger = LogManager.GetCurrentClassLogger();
         }
         public static DecryptorLogger Instance

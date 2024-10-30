@@ -22,10 +22,10 @@ namespace telemetry_device_main.decryptor
             }
             catch (Exception ex)
             {
-                _logger.LogFatal(ex.ToString());
+                _logger.LogFatal("Tried to deseralize icd -"+ex.Message);
                 return;
             }
-            _logger.LogInfo("succesfuly deserialized icd");
+            _logger.LogInfo("Succesfuly deserialized icd");
         }
         const int BYTE_LENGTH = 8;
 
