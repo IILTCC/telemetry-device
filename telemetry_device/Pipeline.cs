@@ -19,7 +19,7 @@ namespace telemetry_device
     {
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
-
+        const int HEADER_SIZE = 27;
         private ActionBlock<Packet> _disposedPackets;
         private BufferBlock<Packet> _pullerBlock;
         private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
@@ -102,11 +102,16 @@ namespace telemetry_device
             var udpPacket = packet.Extract<UdpPacket>();
 
             // remove header bytes
-            byte[] packetData = new byte[udpPacket.PayloadData.Length - 3];
+            byte[] packetData = new byte[udpPacket.PayloadData.Length - HEADER_SIZE];
             for (int i = 0; i < packetData.Length; i++)
-                packetData[i] = udpPacket.PayloadData[i + 3];
+                packetData[i] = udpPacket.PayloadData[i + HEADER_SIZE];
 
             int type = udpPacket.PayloadData[2];
+            byte[] timestampBytes = new byte[24];
+            for (int i = 0; i < timestampBytes.Length; i++)
+                timestampBytes[i] = udpPacket.PayloadData[i + 3];
+            string timestamp = Encoding.ASCII.GetString(timestampBytes);
+            
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
 
