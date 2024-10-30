@@ -24,10 +24,13 @@ namespace telemetry_device
         private PipeLine _pipeLine;
         private TelemetryDeviceSettings _telemetryDeviceSettings;
         private KafkaConnection _kafkaConnection;
+        private TelemetryLogger _logger;
         public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings)
         {
+            _logger = TelemetryLogger.Instance;
             _kafkaConnection = new KafkaConnection(telemetryDeviceSettings);
             _kafkaConnection.WaitForKafkaConnection();
+            _logger.LogInfo("connection established to kafka");
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
         }
@@ -69,6 +72,8 @@ namespace telemetry_device
 
             int readTimeoutMilliseconds = _telemetryDeviceSettings.TelemetryReadTimeout;
             device.Open(mode: DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.NoCaptureLocal, read_timeout: readTimeoutMilliseconds);
+
+            _logger.LogInfo("starting sniffing packets");
 
             device.StartCapture();
 

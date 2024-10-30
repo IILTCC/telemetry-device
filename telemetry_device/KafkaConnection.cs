@@ -13,9 +13,10 @@ namespace telemetry_device
     {
         private IProducer<Null, string> _producer ;
         private IAdminClient _adminClient;
-
+        private TelemetryLogger _logger;
         public KafkaConnection(TelemetryDeviceSettings telemetryDeviceSettings)
         {
+            _logger = TelemetryLogger.Instance;
             ProducerConfig producerConfig = new ProducerConfig
             {
                 BootstrapServers = telemetryDeviceSettings.KafkaUrl
@@ -29,6 +30,7 @@ namespace telemetry_device
         }
         public void SendToTopic(string topicName, Dictionary<string,(int,bool)> paramDict)
         {
+           
             string jsonString = JsonConvert.SerializeObject(paramDict);
             Message<Null,string> message = new Message<Null, string>
             {
@@ -48,9 +50,13 @@ namespace telemetry_device
                     return;
                 }
                 catch(KafkaException e)
-                { }
+                {
+                    _logger.LogFatal(e.ToString());
+                }
                 catch(Exception e) 
-                { }
+                {
+                    _logger.LogFatal(e.ToString());
+                }
             }
         }
 
