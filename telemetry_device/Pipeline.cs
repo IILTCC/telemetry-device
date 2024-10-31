@@ -3,6 +3,7 @@ using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -20,6 +21,7 @@ namespace telemetry_device
         const string FILE_TYPE = ".json";
         const string REPO_PATH = "../../../icd_repo/";
         const int HEADER_SIZE = 27;
+
         private ActionBlock<Packet> _disposedPackets;
         private BufferBlock<Packet> _pullerBlock;
         private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
@@ -32,17 +34,20 @@ namespace telemetry_device
 
         private KafkaConnection _kafkaConnection;
         private TelemetryLogger _logger;
+        private StatisticsAnalyzer _statAnalyze;
+        private readonly Dictionary<IcdTypes,IcdtoMetricItem> _icdToMetric;
         public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
             _logger = TelemetryLogger.Instance;
+            _statAnalyze = StatisticsAnalyzer.Instance;
 
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
 
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
-
-            // acts as clearing buffer endpoint for unwanted packets
-            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { });
+            _icdToMetric = new Dictionary<IcdTypes, IcdtoMetricItem>();
+            // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
+            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { _statAnalyze.UpdateMetric(MetricType.PacketDropRate, 100); });
 
             _extractPacketData = new TransformBlock<Packet, TransformBlockItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
@@ -56,11 +61,30 @@ namespace telemetry_device
             _extractPacketData.LinkTo(_decryptBlock);
             _decryptBlock.LinkTo(_sendToKafka);
             InitializeIcdDictionary();
+            InitializeIcdToMetric();
             _logger.LogInfo("Succesfuly initalized all icds");
         }
         private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
         {
-            _kafkaConnection.SendToTopic(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+            DateTime beforeDecrypt = DateTime.Now;
+            _kafkaConnection.SendIcdToTopic(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+
+            int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+
+            _statAnalyze.UpdateMetric(_icdToMetric[sendToKafkaItem.PacketType].KafkaSend, decryptTime);
+
+            _kafkaConnection.SendStatisticToTopic(_statAnalyze.GetDataDictionary());
+        }
+        public void InitializeIcdToMetric()
+        {
+            IcdtoMetricItem fiberBoxDown = new IcdtoMetricItem(MetricType.FiberBoxDownCorruptedPacket, MetricType.FiberBoxDownKafkaSend, MetricType.FiberBoxDownDecryptTime);
+            IcdtoMetricItem fiberBoxUp = new IcdtoMetricItem(MetricType.FiberBoxUpCorruptedPacket, MetricType.FiberBoxUpKafkaSend, MetricType.FiberBoxUpDecryptTime);
+            IcdtoMetricItem flightBoxDown = new IcdtoMetricItem(MetricType.FlightBoxDownCorruptedPacket, MetricType.FlightBoxDownKafkaSend, MetricType.FlightBoxDownDecryptTime);
+            IcdtoMetricItem flightBoxUp = new IcdtoMetricItem(MetricType.FlightBoxUpCorruptedPacket, MetricType.FlightBoxUpKafkaSend, MetricType.FlightBoxUpDecryptTime);
+            _icdToMetric.Add(IcdTypes.FiberBoxDownIcd,fiberBoxDown);
+            _icdToMetric.Add(IcdTypes.FiberBoxUpIcd, fiberBoxUp);
+            _icdToMetric.Add(IcdTypes.FlightBoxUpIcd,flightBoxUp);
+            _icdToMetric.Add(IcdTypes.FlightBoxDownIcd,flightBoxDown);
         }
         private void InitializeIcdDictionary()
         {
@@ -99,6 +123,9 @@ namespace telemetry_device
 
         private TransformBlockItem ExtractPacketData(Packet packet)
         {
+            // acts as precentage for good packet
+            _statAnalyze.UpdateMetric(MetricType.PacketDropRate, 0);
+
             var udpPacket = packet.Extract<UdpPacket>();
 
             // remove header bytes
@@ -110,8 +137,13 @@ namespace telemetry_device
             byte[] timestampBytes = new byte[24];
             for (int i = 0; i < timestampBytes.Length; i++)
                 timestampBytes[i] = udpPacket.PayloadData[i + 3];
+
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
-            
+
+            // the format in which the timestamp is in the packet
+            DateTime dateTime = DateTime.ParseExact(timestamp, "dd,MM,yyyy,HH,mm,ss,ffff", CultureInfo.InvariantCulture);
+
+            _statAnalyze.UpdateMetric(MetricType.SniffingTime,(int)DateTime.Now.Subtract(dateTime).TotalMilliseconds);
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
 
@@ -119,7 +151,19 @@ namespace telemetry_device
         {
             try
             {
+                DateTime beforeDecrypt = DateTime.Now;
+
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
+                int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+
+                _statAnalyze.UpdateMetric(_icdToMetric[transformItem.PacketType].DecryptTime,decryptTime);
+
+                int errorCounter = 0;
+                foreach ((int, bool) param in decryptedParamDict.Values)
+                    if (param.Item2)
+                        errorCounter++;
+                _statAnalyze.UpdateMetric(_icdToMetric[transformItem.PacketType].CorruptedPacket,errorCounter);
+
                 return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
             }
             catch (Exception ex)
