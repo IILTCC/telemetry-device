@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace telemetry_device.compactCollection
 {
-    class Statistic
+    class GlobalStatistics
     {
         private int _counter;
         private int _sum;
-        public Statistic()
+        public GlobalStatistics()
         {
             _counter = 0;
             _sum = 0;

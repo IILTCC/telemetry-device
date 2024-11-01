@@ -7,15 +7,15 @@ using telemetry_device_main.icds;
 
 namespace telemetry_device.compactCollection
 {
-    class MultiStatistic
+    class IcdStatistics
     {
-        private Dictionary<IcdTypes, Statistic> _statistics;
-        public MultiStatistic()
+        private Dictionary<IcdTypes, GlobalStatistics> _statistics;
+        public IcdStatistics()
         {
-            _statistics = new Dictionary<IcdTypes, Statistic>();
+            _statistics = new Dictionary<IcdTypes, GlobalStatistics>();
             foreach(IcdTypes icdType in Enum.GetValues(typeof(IcdTypes)))
             {
-                _statistics.Add(icdType, new Statistic());
+                _statistics.Add(icdType, new GlobalStatistics());
             }
         }
         public void AddCounter(IcdTypes icdType,int increment)

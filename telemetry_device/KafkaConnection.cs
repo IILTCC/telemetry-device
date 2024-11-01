@@ -33,21 +33,20 @@ namespace telemetry_device
         public void SendFrameToKafka(string topicName, Dictionary<string,(int,bool)> paramDict)
         {
             string jsonString = JsonConvert.SerializeObject(paramDict);
-            Message<Null,string> message = new Message<Null, string>
-            {
-                Value = jsonString
-            };
-            _producer.Produce(topicName, message);
+            SendToKafka(jsonString,topicName);
         }
-        public void SendStatisticsToKafka(Dictionary<string,float> metricDict)
+        public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,float> metricDict)
         {
             string jsonString = JsonConvert.SerializeObject(metricDict);
+            SendToKafka(jsonString, STATISTIC_TOPIC);
+        }
+        private void SendToKafka(string jsonString,string topicName)
+        {
             Message<Null, string> message = new Message<Null, string>
             {
                 Value = jsonString
             };
-            _producer.Produce(STATISTIC_TOPIC, message);
-
+            _producer.Produce(topicName, message);
         }
         public void WaitForKafkaConnection()
         {

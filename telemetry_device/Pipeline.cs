@@ -37,7 +37,6 @@ namespace telemetry_device
         private KafkaConnection _kafkaConnection;
         private TelemetryLogger _logger;
         private StatisticsAnalyzer _statAnalyze;
-        private readonly Dictionary<IcdTypes,IcdtoStatItem> _icdToMetric;
         public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
             _logger = TelemetryLogger.Instance;
@@ -47,9 +46,8 @@ namespace telemetry_device
             _kafkaConnection = kafkaConnection;
 
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
-            _icdToMetric = new Dictionary<IcdTypes, IcdtoStatItem>();
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
-            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { _statAnalyze.UpdateStatistic(SingleStatisticType.PacketDropRate, 100); });
+            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, 100); });
 
             _extractPacketData = new TransformBlock<Packet, TransformBlockItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
@@ -72,7 +70,7 @@ namespace telemetry_device
 
             int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
 
-            _statAnalyze.UpdateStatistic(MultiStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decryptTime);
+            _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decryptTime);
 
             _kafkaConnection.SendStatisticsToKafka(_statAnalyze.GetDataDictionary());
         }
@@ -115,7 +113,7 @@ namespace telemetry_device
         private TransformBlockItem ExtractPacketData(Packet packet)
         {
             // acts as precentage for good packet
-            _statAnalyze.UpdateStatistic(SingleStatisticType.PacketDropRate, 0);
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, 0);
 
             var udpPacket = packet.Extract<UdpPacket>();
 
@@ -134,11 +132,19 @@ namespace telemetry_device
             // the format in which the timestamp is in the packet
             DateTime dateTime = DateTime.ParseExact(timestamp, TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
-            _statAnalyze.UpdateStatistic(SingleStatisticType.SniffingTime, sinffingTime);
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
-
+        public int calcErrorCount(Dictionary<string, (int, bool)> errorDict)
+        {
+            int errorCounter = 0;
+            foreach ((int, bool) param in errorDict.Values)
+                // item2 - a variable determining if this parameter is withing icd range
+                if (param.Item2)
+                    errorCounter++;
+            return errorCounter;
+        }
         private SendToKafkaItem ProccessPackets(TransformBlockItem transformItem)
         {
             try
@@ -148,14 +154,9 @@ namespace telemetry_device
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
                 int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
 
-                _statAnalyze.UpdateStatistic(MultiStatisticType.DecryptTime, transformItem.PacketType, decryptTime);
+                _statAnalyze.UpdateStatistic(IcdStatisticType.DecryptTime, transformItem.PacketType, decryptTime);
 
-                int errorCounter = 0;
-                foreach ((int, bool) param in decryptedParamDict.Values)
-                    if (param.Item2)
-                        errorCounter++;
-
-                _statAnalyze.UpdateStatistic(MultiStatisticType.CorruptedPacket, transformItem.PacketType, errorCounter);
+                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, calcErrorCount(decryptedParamDict));
                 return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
             }
             catch (Exception ex)

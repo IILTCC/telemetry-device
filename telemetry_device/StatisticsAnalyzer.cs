@@ -11,17 +11,17 @@ namespace telemetry_device
     class StatisticsAnalyzer
     {
         private static StatisticsAnalyzer _instance;
-        private Dictionary<SingleStatisticType,Statistic> _singleStatistics;
-        private Dictionary<MultiStatisticType,MultiStatistic> _multiStatistics;
+        private Dictionary<GlobalStatisticType,GlobalStatistics> _globalStatistics;
+        private Dictionary<IcdStatisticType,IcdStatistics> _icdStatistics;
         private StatisticsAnalyzer()
         {
-            _singleStatistics = new Dictionary<SingleStatisticType, Statistic>();
-            _multiStatistics = new Dictionary<MultiStatisticType, MultiStatistic>();
-            foreach(SingleStatisticType statType in Enum.GetValues(typeof(SingleStatisticType)))
-                _singleStatistics.Add(statType, new Statistic());
+            _globalStatistics = new Dictionary<GlobalStatisticType, GlobalStatistics>();
+            _icdStatistics = new Dictionary<IcdStatisticType, IcdStatistics>();
+            foreach(GlobalStatisticType statType in Enum.GetValues(typeof(GlobalStatisticType)))
+                _globalStatistics.Add(statType, new GlobalStatistics());
 
-            foreach (MultiStatisticType statType in Enum.GetValues(typeof(MultiStatisticType)))
-                _multiStatistics.Add(statType, new MultiStatistic());
+            foreach (IcdStatisticType statType in Enum.GetValues(typeof(IcdStatisticType)))
+                _icdStatistics.Add(statType, new IcdStatistics());
         }
         public static StatisticsAnalyzer Instance
         {
@@ -34,26 +34,28 @@ namespace telemetry_device
                 return _instance;
             }
         }
-        public void UpdateStatistic(SingleStatisticType statType,int value)
+        public void UpdateStatistic(GlobalStatisticType statType,int value)
         {
-            _singleStatistics[statType].AddCounter(value);
+            _globalStatistics[statType].AddCounter(value);
         }
-        public void UpdateStatistic(MultiStatisticType statType,IcdTypes icdType,int value)
+        public void UpdateStatistic(IcdStatisticType statType,IcdTypes icdType,int value)
         {
-            _multiStatistics[statType].AddCounter(icdType, value);
+            _icdStatistics[statType].AddCounter(icdType, value);
         }
-        public Dictionary<string,float> GetDataDictionary()
+        public Dictionary<StatisticDictionaryKey, float> GetDataDictionary()
         {
-            Dictionary<string, float> avgDict = new Dictionary<string, float>();
-            foreach(SingleStatisticType key in _singleStatistics.Keys)
+            Dictionary<StatisticDictionaryKey, float> avgDict = new Dictionary<StatisticDictionaryKey, float>();
+            foreach(GlobalStatisticType key in _globalStatistics.Keys)
             {
-                avgDict.Add(key.ToString(), _singleStatistics[key].GetAvg());
+                StatisticDictionaryKey dictionaryKey = new StatisticDictionaryKey(key);
+                avgDict.Add(dictionaryKey, _globalStatistics[key].GetAvg());
             }
-            foreach(MultiStatisticType key in _multiStatistics.Keys)
+            foreach(IcdStatisticType key in _icdStatistics.Keys)
             {
                 foreach(IcdTypes icdType in Enum.GetValues(typeof(IcdTypes)))
                 {
-                    avgDict.Add(key.ToString()+"-"+icdType.ToString(),_multiStatistics[key].GetAvg(icdType));
+                    StatisticDictionaryKey dictionaryKey = new StatisticDictionaryKey(icdType,key);
+                    avgDict.Add(dictionaryKey,_icdStatistics[key].GetAvg(icdType));
                 }
             }
             return avgDict;

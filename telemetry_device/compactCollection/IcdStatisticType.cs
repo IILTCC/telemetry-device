@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace telemetry_device.compactCollection
 {
-    enum SingleStatisticType
+    enum IcdStatisticType
     {
-        SniffingTime,
-        PacketDropRate
+        CorruptedPacket,
+        DecryptTime,
+        KafkaUploadTime
     }
 }
