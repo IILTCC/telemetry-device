@@ -30,7 +30,7 @@ namespace telemetry_device
             _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
             _adminClient = new AdminClientBuilder(adminConfig).Build();
         }
-        public void SendIcdToTopic(string topicName, Dictionary<string,(int,bool)> paramDict)
+        public void SendFrameToKafka(string topicName, Dictionary<string,(int,bool)> paramDict)
         {
             string jsonString = JsonConvert.SerializeObject(paramDict);
             Message<Null,string> message = new Message<Null, string>
@@ -39,7 +39,7 @@ namespace telemetry_device
             };
             _producer.Produce(topicName, message);
         }
-        public void SendStatisticToTopic(Dictionary<MetricType,float> metricDict)
+        public void SendStatisticsToKafka(Dictionary<string,float> metricDict)
         {
             string jsonString = JsonConvert.SerializeObject(metricDict);
             Message<Null, string> message = new Message<Null, string>
