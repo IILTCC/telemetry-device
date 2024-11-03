@@ -3,6 +3,7 @@ using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,9 +18,12 @@ namespace telemetry_device
 {
     class PipeLine
     {
-        const string FILE_TYPE = ".json";
-        const string REPO_PATH = "../../../icd_repo/";
-        const int HEADER_SIZE = 27;
+        private const string FILE_TYPE = ".json";
+        private const string REPO_PATH = "../../../icd_repo/";
+        private const int HEADER_SIZE = 27;
+        private const string TIMESTAMP_FORMAT = "dd,MM,yyyy,HH,mm,ss,ffff";
+
+
         private ActionBlock<Packet> _disposedPackets;
         private BufferBlock<Packet> _pullerBlock;
         private TransformBlock<Packet, TransformBlockItem> _extractPacketData;
@@ -32,17 +36,18 @@ namespace telemetry_device
 
         private KafkaConnection _kafkaConnection;
         private TelemetryLogger _logger;
+        private StatisticsAnalyzer _statAnalyze;
         public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
             _logger = TelemetryLogger.Instance;
+            _statAnalyze = StatisticsAnalyzer.Instance;
 
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
 
             this._icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
-
-            // acts as clearing buffer endpoint for unwanted packets
-            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { });
+            // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
+            _disposedPackets = new ActionBlock<Packet>((Packet packet) => { _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, 100); });
 
             _extractPacketData = new TransformBlock<Packet, TransformBlockItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
@@ -60,8 +65,16 @@ namespace telemetry_device
         }
         private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
         {
-            _kafkaConnection.SendToTopic(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+            DateTime beforeDecrypt = DateTime.Now;
+            _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+
+            int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+
+            _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decryptTime);
+
+            _kafkaConnection.SendStatisticsToKafka(_statAnalyze.GetDataDictionary());
         }
+
         private void InitializeIcdDictionary()
         {
             
@@ -99,6 +112,9 @@ namespace telemetry_device
 
         private TransformBlockItem ExtractPacketData(Packet packet)
         {
+            // acts as precentage for good packet
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, 0);
+
             var udpPacket = packet.Extract<UdpPacket>();
 
             // remove header bytes
@@ -110,16 +126,37 @@ namespace telemetry_device
             byte[] timestampBytes = new byte[24];
             for (int i = 0; i < timestampBytes.Length; i++)
                 timestampBytes[i] = udpPacket.PayloadData[i + 3];
+
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
+
+            // the format in which the timestamp is in the packet
+            DateTime dateTime = DateTime.ParseExact(timestamp, TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
+            int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
-
+        public int calcErrorCount(Dictionary<string, (int, bool)> errorDict)
+        {
+            int errorCounter = 0;
+            foreach ((int, bool) param in errorDict.Values)
+                // item2 - a variable determining if this parameter is withing icd range
+                if (param.Item2)
+                    errorCounter++;
+            return errorCounter;
+        }
         private SendToKafkaItem ProccessPackets(TransformBlockItem transformItem)
         {
             try
             {
+                DateTime beforeDecrypt = DateTime.Now;
+
                 Dictionary<string, (int, bool)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
+                int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+
+                _statAnalyze.UpdateStatistic(IcdStatisticType.DecryptTime, transformItem.PacketType, decryptTime);
+
+                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, calcErrorCount(decryptedParamDict));
                 return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
             }
             catch (Exception ex)
