@@ -20,7 +20,7 @@ namespace telemetry_device
     {
         private const string FILE_TYPE = ".json";
         private const string REPO_PATH = "../../../icd_repo/";
-        private const int HEADER_SIZE = 27;
+        private const int HEADER_SIZE = 25;
         private const string TIMESTAMP_FORMAT = "dd,MM,yyyy,HH,mm,ss,ffff";
 
 
@@ -122,10 +122,10 @@ namespace telemetry_device
             for (int i = 0; i < packetData.Length; i++)
                 packetData[i] = udpPacket.PayloadData[i + HEADER_SIZE];
 
-            int type = udpPacket.PayloadData[2];
+            int type = udpPacket.PayloadData[0];
             byte[] timestampBytes = new byte[24];
             for (int i = 0; i < timestampBytes.Length; i++)
-                timestampBytes[i] = udpPacket.PayloadData[i + 3];
+                timestampBytes[i] = udpPacket.PayloadData[i + 1];
 
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
 
@@ -136,7 +136,7 @@ namespace telemetry_device
             
             return new TransformBlockItem((IcdTypes)type, packetData);
         }
-        public int calcErrorCount(Dictionary<string, (int, bool)> errorDict)
+        public int CalcErrorCount(Dictionary<string, (int, bool)> errorDict)
         {
             int errorCounter = 0;
             foreach ((int, bool) param in errorDict.Values)
@@ -156,7 +156,7 @@ namespace telemetry_device
 
                 _statAnalyze.UpdateStatistic(IcdStatisticType.DecryptTime, transformItem.PacketType, decryptTime);
 
-                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, calcErrorCount(decryptedParamDict));
+                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decryptedParamDict));
                 return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
             }
             catch (Exception ex)
