@@ -1,21 +1,19 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {
     public class IcdPacketDecryptor<IcdType> where IcdType : IBaseIcd
     {
-        private List<IcdType> _icdRows;
-        private DecryptorLogger _logger;
+        private readonly List<IcdType> _icdRows;
+        private readonly DecryptorLogger _logger;
+        const int BYTE_LENGTH = 8;
+
         public IcdPacketDecryptor(string json) 
         {
             _logger = DecryptorLogger.Instance;
-            List<IcdType> icdRows;
             try
             {
                 _icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
@@ -27,7 +25,6 @@ namespace telemetry_device_main.decryptor
             }
             _logger.LogInfo("Succesfuly deserialized icd");
         }
-        const int BYTE_LENGTH = 8;
 
         // takes a icd row the entire packet and returnes accurate byte array of correct length
         private byte[] GetAccurateValue(IcdType row, byte[] packet)
@@ -39,11 +36,13 @@ namespace telemetry_device_main.decryptor
 
             return retValue;
         }
+
         private void CreateMask(string mask,ref byte rowValue)
         {
+            const int MASK_BASE = 2;
             if (mask == string.Empty)
                 return;
-            byte maskByte = Convert.ToByte(mask, 2);
+            byte maskByte = Convert.ToByte(mask, MASK_BASE);
 
             rowValue = (byte)(rowValue &maskByte);
 
@@ -53,10 +52,11 @@ namespace telemetry_device_main.decryptor
                 maskByte = (byte)(maskByte >> 1);
             }
         }
+
         private int ConvertByteArrayToInt(byte[] byteArray,bool isNegative)
         {
-            // base for int 32 requires 4 byte array
-            byte[] retvalue = new byte[4];
+            const int INT32_SIZE = 4;
+            byte[] retvalue = new byte[INT32_SIZE];
 
             // if the integer is negative needs to be initialized with 1
             if(isNegative)
@@ -69,7 +69,6 @@ namespace telemetry_device_main.decryptor
 
         private bool IsNegative(IcdType row,byte[] rowValue)
         {
-            // cheks if icd is sigend or unsigned
             if (row.GetMax() < 0 || row.GetMin() < 0)
                 if ((rowValue[0] & 0b10000000) >0) // checks msb
                     return true;
@@ -83,9 +82,9 @@ namespace telemetry_device_main.decryptor
             return true;
         }
 
-        // generates the entire dictionary
-        private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int, bool)> icdParameters, byte[] packet)
+        private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet)
         {
+            const int MASK_BYTE_POSITION = 0;
             int corValue = -1;
             foreach (IcdType icdType in icdRows)
             {
@@ -93,7 +92,7 @@ namespace telemetry_device_main.decryptor
                     continue;
 
                 byte[] rowValue = GetAccurateValue(icdType, packet);
-                CreateMask(icdType.GetMask(), ref rowValue[0]);
+                CreateMask(icdType.GetMask(), ref rowValue[MASK_BYTE_POSITION]);
 
                 int finalValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
 
@@ -106,8 +105,7 @@ namespace telemetry_device_main.decryptor
 
         public Dictionary<string,(int,bool)> DecryptPacket(byte[] packet)
         {
-            // bool in dictionary is for error detection
-            Dictionary<string, (int,bool)> icdParameters = new Dictionary<string, (int,bool)>();
+            Dictionary<string, (int paramValue,bool wasErrorFound)> icdParameters = new Dictionary<string, (int,bool)>();
 
             GenerateParameters(_icdRows, ref icdParameters, packet);
             return icdParameters;
