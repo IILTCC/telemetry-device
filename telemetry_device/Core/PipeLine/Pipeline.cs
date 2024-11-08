@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
+using telemetry_device.Core;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 
@@ -14,10 +15,7 @@ namespace telemetry_device
 {
     class PipeLine
     {
-        private const string FILE_TYPE = ".json";
-        private const string REPO_PATH = "../../../icd_repo/";
-        private const int HEADER_SIZE = 25;
-        private const string TIMESTAMP_FORMAT = "dd,MM,yyyy,HH,mm,ss,ffff";
+
 
         private readonly ActionBlock<Packet> _disposedPackets;
         private readonly BufferBlock<Packet> _pullerBlock;
@@ -67,7 +65,7 @@ namespace telemetry_device
 
             foreach ((IcdTypes, Type) icdInitialization in icdTypes)
             {
-                string jsonText = File.ReadAllText(REPO_PATH + icdInitialization.Item1.ToString() + FILE_TYPE);
+                string jsonText = File.ReadAllText(Consts.REPO_PATH + icdInitialization.Item1.ToString() + Consts.FILE_TYPE);
                 Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
                 _icdDictionary.TryAdd(icdInitialization.Item1, Activator.CreateInstance(genericIcdType, new object[] { jsonText }));
             }
@@ -110,7 +108,7 @@ namespace telemetry_device
 
             var udpPacket = packet.Extract<UdpPacket>();
             // remove header bytes
-            byte[] packetData = new byte[udpPacket.PayloadData.Length - HEADER_SIZE];
+            byte[] packetData = new byte[udpPacket.PayloadData.Length - Consts.HEADER_SIZE];
             byte[] typeBytes = new byte[TYPE_SIZE];
             byte[] timestampBytes = new byte[TIMESTAMP_SIZE];
             List<byte[]> packetParams = new List<byte[]>() {typeBytes,timestampBytes,packetData};
@@ -123,7 +121,7 @@ namespace telemetry_device
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
 
             // the format in which the timestamp is in the packet
-            DateTime dateTime = DateTime.ParseExact(timestamp, TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
+            DateTime dateTime = DateTime.ParseExact(timestamp, Consts.TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
             _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             

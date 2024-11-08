@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
+using telemetry_device.Core;
 
 namespace telemetry_device
 {
     class KafkaConnection
     {
-        private const string STATISTIC_TOPIC = "TelemetryStatistics";
         private readonly IProducer<Null, string> _producer ;
         private readonly IAdminClient _adminClient;
         private readonly TelemetryLogger _logger;
@@ -58,7 +58,7 @@ namespace telemetry_device
         public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,float> metricDict)
         {
             string jsonString = JsonConvert.SerializeObject(metricDict);
-            SendToKafka(jsonString, STATISTIC_TOPIC);
+            SendToKafka(jsonString, Consts.STATISTIC_TOPIC);
         }
 
         private void SendToKafka(string jsonString,string topicName)
