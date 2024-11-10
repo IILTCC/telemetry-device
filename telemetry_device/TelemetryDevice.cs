@@ -3,11 +3,11 @@ using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
 using System.Threading.Tasks;
+
 namespace telemetry_device
 {
     class TelemetryDevice
     {
-        const string NETWORK_DEVICE_NAME = @"\Device\NPF_{026FB3A3-275B-4791-91BE-BB5CC388A4D7}";
         private readonly PipeLine _pipeLine;
         private readonly TelemetryDeviceSettings _telemetryDeviceSettings;
         private readonly KafkaConnection _kafkaConnection;
@@ -38,7 +38,7 @@ namespace telemetry_device
             int deviceIndex = 0;
             foreach (var dev in devices)
             {
-                if (dev.Name == NETWORK_DEVICE_NAME)
+                if (dev.Name == Consts.NETWORK_DEVICE_NAME)
                     break;
                 deviceIndex++;
             }

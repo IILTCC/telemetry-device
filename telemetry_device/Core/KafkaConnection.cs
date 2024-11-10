@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
-using telemetry_device.Core;
 
 namespace telemetry_device
 {
@@ -30,12 +29,11 @@ namespace telemetry_device
 
         public void WaitForKafkaConnection()
         {
-            const int TIMEOUT = 5;
             while (true)
             {
                 try
                 {
-                    _adminClient.GetMetadata(TimeSpan.FromSeconds(TIMEOUT));
+                    _adminClient.GetMetadata(TimeSpan.FromSeconds(Consts.TIMEOUT));
                     return;
                 }
                 catch(KafkaException e)

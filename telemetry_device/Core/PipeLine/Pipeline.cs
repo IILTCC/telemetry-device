@@ -7,7 +7,6 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
-using telemetry_device.Core;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 
@@ -94,23 +93,20 @@ namespace telemetry_device
 
         public void DisposedPackets(Packet packet)
         {
-            const int BAD_PACKET_PRECENTAGE = 100;
-            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, BAD_PACKET_PRECENTAGE);
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.BAD_PACKET_PRECENTAGE);
         }
 
         private ToDecryptPacketItem ExtractPacketData(Packet packet)
         {
-            const int TYPE_SIZE = 1;
-            const int TIMESTAMP_SIZE = 24;
-            const int GOOD_PACKET_PRECENTAGE = 0;
 
-            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, GOOD_PACKET_PRECENTAGE);
+
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.GOOD_PACKET_PRECENTAGE);
 
             var udpPacket = packet.Extract<UdpPacket>();
             // remove header bytes
             byte[] packetData = new byte[udpPacket.PayloadData.Length - Consts.HEADER_SIZE];
-            byte[] typeBytes = new byte[TYPE_SIZE];
-            byte[] timestampBytes = new byte[TIMESTAMP_SIZE];
+            byte[] typeBytes = new byte[Consts.TYPE_SIZE];
+            byte[] timestampBytes = new byte[Consts.TIMESTAMP_SIZE];
             List<byte[]> packetParams = new List<byte[]>() {typeBytes,timestampBytes,packetData};
             int packetOffset = 0;
             foreach(byte[] param in packetParams)
