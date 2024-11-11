@@ -9,6 +9,7 @@ using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
+using telemetry_device_main;
 
 namespace telemetry_device
 {
@@ -39,7 +40,7 @@ namespace telemetry_device
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
             _extractPacketData = new TransformBlock<Packet, ToDecryptPacketItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
-            _decryptBlock = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(ProccessPackets);
+            _decryptBlock = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
             _sendToKafka = new ActionBlock<SendToKafkaItem>(SendParamToKafka);
 
             ConfigurePipelineLinks();
@@ -96,22 +97,26 @@ namespace telemetry_device
             _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.BAD_PACKET_PRECENTAGE);
         }
 
+        private void LoadByteToArray(ref byte[] packetData , ref byte[] typeBytes , ref byte[] timestampBytes,UdpPacket udpPacket)
+        {
+            List<byte[]> packetParams = new List<byte[]>() { typeBytes, timestampBytes, packetData };
+            int packetOffset = 0;
+            foreach (byte[] param in packetParams)
+                for (int paramIndex = 0; paramIndex < param.Length; paramIndex++)
+                    param[paramIndex] = udpPacket.PayloadData[packetOffset++];
+        }
+
         private ToDecryptPacketItem ExtractPacketData(Packet packet)
         {
-
-
             _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.GOOD_PACKET_PRECENTAGE);
 
-            var udpPacket = packet.Extract<UdpPacket>();
+            UdpPacket udpPacket = packet.Extract<UdpPacket>();
             // remove header bytes
             byte[] packetData = new byte[udpPacket.PayloadData.Length - Consts.HEADER_SIZE];
             byte[] typeBytes = new byte[Consts.TYPE_SIZE];
             byte[] timestampBytes = new byte[Consts.TIMESTAMP_SIZE];
-            List<byte[]> packetParams = new List<byte[]>() {typeBytes,timestampBytes,packetData};
-            int packetOffset = 0;
-            foreach(byte[] param in packetParams)
-                for (int paramIndex = 0; paramIndex < param.Length; paramIndex++)
-                    param[paramIndex] = udpPacket.PayloadData[packetOffset++];
+
+            LoadByteToArray(ref packetData,ref typeBytes,ref timestampBytes,udpPacket);
 
             int type = typeBytes[0];
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
@@ -124,7 +129,7 @@ namespace telemetry_device
             return new ToDecryptPacketItem((IcdTypes)type, packetData);
         }
 
-        private SendToKafkaItem ProccessPackets(ToDecryptPacketItem transformItem)
+        private SendToKafkaItem DecryptPacket(ToDecryptPacketItem transformItem)
         {
             try
             {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
+using telemetry_device_main;
 
 namespace telemetry_device
 {

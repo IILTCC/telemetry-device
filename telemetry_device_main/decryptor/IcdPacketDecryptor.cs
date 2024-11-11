@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using telemetry_device_main;
 using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
@@ -9,7 +10,6 @@ namespace telemetry_device_main.decryptor
     {
         private readonly List<IcdType> _icdRows;
         private readonly DecryptorLogger _logger;
-        const int BYTE_LENGTH = 8;
 
         public IcdPacketDecryptor(string json) 
         {
@@ -29,7 +29,7 @@ namespace telemetry_device_main.decryptor
         // takes a icd row the entire packet and returnes accurate byte array of correct length
         private byte[] GetAccurateValue(IcdType row, byte[] packet)
         {
-            int retValueSize = row.GetSize() / BYTE_LENGTH + (row.GetSize() % BYTE_LENGTH != 0 ? 1 : 0);
+            int retValueSize = row.GetSize() / Consts.BYTE_LENGTH + (row.GetSize() % Consts.BYTE_LENGTH != 0 ? 1 : 0);
             byte[] retValue = new byte[retValueSize];
             for (int i = 0; i < retValue.Length; i++)
                 retValue[i] = packet[row.GetLocation() + i];
@@ -39,10 +39,9 @@ namespace telemetry_device_main.decryptor
 
         private void CreateMask(string mask,ref byte rowValue)
         {
-            const int MASK_BASE = 2;
             if (mask == string.Empty)
                 return;
-            byte maskByte = Convert.ToByte(mask, MASK_BASE);
+            byte maskByte = Convert.ToByte(mask, Consts.MASK_BASE);
 
             rowValue = (byte)(rowValue &maskByte);
 
@@ -55,8 +54,7 @@ namespace telemetry_device_main.decryptor
 
         private int ConvertByteArrayToInt(byte[] byteArray,bool isNegative)
         {
-            const int INT32_SIZE = 4;
-            byte[] retvalue = new byte[INT32_SIZE];
+            byte[] retvalue = new byte[Consts.INT32_SIZE];
 
             // if the integer is negative needs to be initialized with 1
             if(isNegative)
@@ -84,7 +82,6 @@ namespace telemetry_device_main.decryptor
 
         private void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet)
         {
-            const int MASK_BYTE_POSITION = 0;
             int corValue = -1;
             foreach (IcdType icdType in icdRows)
             {
@@ -92,7 +89,7 @@ namespace telemetry_device_main.decryptor
                     continue;
 
                 byte[] rowValue = GetAccurateValue(icdType, packet);
-                CreateMask(icdType.GetMask(), ref rowValue[MASK_BYTE_POSITION]);
+                CreateMask(icdType.GetMask(), ref rowValue[Consts.MASK_BYTE_POSITION]);
 
                 int finalValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
 

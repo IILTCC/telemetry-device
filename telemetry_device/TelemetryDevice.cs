@@ -3,6 +3,7 @@ using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
 using System.Threading.Tasks;
+using telemetry_device_main;
 
 namespace telemetry_device
 {
@@ -59,7 +60,7 @@ namespace telemetry_device
             byte[] rawBits = new byte[e.Data.Length];
             for (int bitIndex = 0; bitIndex < e.Data.Length; bitIndex++)
                 rawBits[bitIndex] = e.Data[bitIndex];
-            var packet = Packet.ParsePacket(e.GetPacket().LinkLayerType, rawBits);
+            Packet packet = Packet.ParsePacket(e.GetPacket().LinkLayerType, rawBits);
            
             _pipeLine.PushToBuffer(packet);
         }
