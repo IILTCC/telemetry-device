@@ -1,5 +1,4 @@
 ﻿using NLog;
-using System;
 
 namespace telemetry_device_main
 {
@@ -7,12 +6,13 @@ namespace telemetry_device_main
     {
         private static DecryptorLogger _instance;
 
-        private Logger _logger;
+        private readonly Logger _logger;
 
         private DecryptorLogger()
         {
             _logger = LogManager.GetCurrentClassLogger();
         }
+
         public static DecryptorLogger Instance
         {
             get
@@ -24,18 +24,22 @@ namespace telemetry_device_main
                 return _instance;
             }
         }
+
         public void LogInfo(string log)
         {
             _logger.Info(log);
         }
+
         public void LogWarn(string log)
         {
             _logger.Warn(log);
         }
+
         public void LogFatal(string log)
         {
             _logger.Fatal(log);
         }
+
         public void LogError(string log)
         {
             _logger.Error(log);

@@ -1,9 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace telemetry_device
@@ -12,6 +8,7 @@ namespace telemetry_device
     {
         private static IConfigurationRoot _configFile;
         private static TelemetryDeviceSettings _telemetryDeviceSettings;
+
         static async Task Main(string[] args)
         {
             _configFile = new ConfigurationBuilder()

@@ -1,21 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Confluent.Kafka;
-using System.Net;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
+using telemetry_device_main;
 
 namespace telemetry_device
 {
     class KafkaConnection
     {
-        private const string STATISTIC_TOPIC = "TelemetryStatistics";
-        private IProducer<Null, string> _producer ;
-        private IAdminClient _adminClient;
-        private TelemetryLogger _logger;
+        private readonly IProducer<Null, string> _producer ;
+        private readonly IAdminClient _adminClient;
+        private readonly TelemetryLogger _logger;
+
         public KafkaConnection(TelemetryDeviceSettings telemetryDeviceSettings)
         {
             _logger = TelemetryLogger.Instance;
@@ -30,32 +27,14 @@ namespace telemetry_device
             _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
             _adminClient = new AdminClientBuilder(adminConfig).Build();
         }
-        public void SendFrameToKafka(string topicName, Dictionary<string,(int,bool)> paramDict)
-        {
-            string jsonString = JsonConvert.SerializeObject(paramDict);
-            SendToKafka(jsonString,topicName);
-        }
-        public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,float> metricDict)
-        {
-            string jsonString = JsonConvert.SerializeObject(metricDict);
-            SendToKafka(jsonString, STATISTIC_TOPIC);
-        }
-        private void SendToKafka(string jsonString,string topicName)
-        {
-            Message<Null, string> message = new Message<Null, string>
-            {
-                Value = jsonString
-            };
-            _producer.Produce(topicName, message);
-        }
+
         public void WaitForKafkaConnection()
         {
-
             while (true)
             {
                 try
                 {
-                    _adminClient.GetMetadata(TimeSpan.FromSeconds(5));
+                    _adminClient.GetMetadata(TimeSpan.FromSeconds(Consts.TIMEOUT));
                     return;
                 }
                 catch(KafkaException e)
@@ -68,6 +47,28 @@ namespace telemetry_device
                 }
             }
         }
+
+        public void SendFrameToKafka(string topicName, Dictionary<string,(int,bool)> paramDict)
+        {
+            string jsonString = JsonConvert.SerializeObject(paramDict);
+            SendToKafka(jsonString,topicName);
+        }
+
+        public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,float> metricDict)
+        {
+            string jsonString = JsonConvert.SerializeObject(metricDict);
+            SendToKafka(jsonString, Consts.STATISTIC_TOPIC);
+        }
+
+        private void SendToKafka(string jsonString,string topicName)
+        {
+            Message<Null, string> message = new Message<Null, string>
+            {
+                Value = jsonString
+            };
+            _producer.Produce(topicName, message);
+        }
+
 
     }
 }
