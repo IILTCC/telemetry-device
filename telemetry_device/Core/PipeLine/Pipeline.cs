@@ -24,7 +24,7 @@ namespace telemetry_device
         private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFlightBoxDown;
         private readonly ActionBlock<SendToKafkaItem> _sendToKafka;
 
-        private readonly ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
+        private readonly ConcurrentDictionary<IcdTypes, IDecryptPacket> _icdDictionary;
         private readonly TelemetryDeviceSettings _telemetryDeviceSettings;
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
@@ -35,7 +35,7 @@ namespace telemetry_device
             _statAnalyze = StatisticsAnalyzer.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
-            _icdDictionary = new ConcurrentDictionary<IcdTypes, dynamic>();
+            _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecryptPacket>();
 
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
@@ -61,25 +61,27 @@ namespace telemetry_device
             for (int decryptIndex = 0; decryptIndex < decryptors.Length; decryptIndex++)
             {
                 IcdTypes icdType = icdTypesArray[decryptIndex];
-                _extractPacketData.LinkTo(decryptors[decryptIndex], (ToDecryptPacketItem toDecryptPacketItem) => { return IsCorrectPort(toDecryptPacketItem, icdType); });
+                _extractPacketData.LinkTo(decryptors[decryptIndex], (ToDecryptPacketItem toDecryptPacketItem) => { return DistributeByPort(toDecryptPacketItem, icdType); });
                 decryptors[decryptIndex].LinkTo(_sendToKafka);
             }
         }
 
         private void InitializeIcdDictionary()
         {
-            (IcdTypes, Type)[] icdTypes = new (IcdTypes, Type)[4] {
-                (IcdTypes.FiberBoxDownIcd,typeof(FiberBoxDownIcd)),
-                (IcdTypes.FiberBoxUpIcd, typeof(FiberBoxUpIcd)),
-                (IcdTypes.FlightBoxDownIcd, typeof(FlightBoxDownIcd)),
-                (IcdTypes.FlightBoxUpIcd, typeof(FlightBoxUpIcd))};
+            string FiberBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FiberBoxDownIcd.ToString() + Consts.FILE_TYPE);
+            string FiberBoxUpJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FiberBoxUpIcd.ToString() + Consts.FILE_TYPE);
+            string FlightBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxDownIcd.ToString() + Consts.FILE_TYPE);
+            string FlightBoxUpJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxUpIcd.ToString() + Consts.FILE_TYPE);
 
-            foreach ((IcdTypes, Type) icdInitialization in icdTypes)
-            {
-                string jsonText = File.ReadAllText(Consts.REPO_PATH + icdInitialization.Item1.ToString() + Consts.FILE_TYPE);
-                Type genericIcdType = typeof(IcdPacketDecryptor<>).MakeGenericType(icdInitialization.Item2);
-                _icdDictionary.TryAdd(icdInitialization.Item1, Activator.CreateInstance(genericIcdType, new object[] { jsonText }));
-            }
+            IDecryptPacket FiberBoxDownDecryptor = new FiberBoxDecryptor<FiberBoxDownIcd>(FiberBoxDownJson);
+            IDecryptPacket FiberBoxUpDecryptor = new FiberBoxDecryptor<FiberBoxUpIcd>(FiberBoxUpJson);
+            IDecryptPacket FlightBoxDownDecryptor = new FlightBoxDecryptor<FlightBoxDownIcd>(FlightBoxDownJson);
+            IDecryptPacket FlightBoxUpDecryptor = new FlightBoxDecryptor<FlightBoxUpIcd>(FlightBoxUpJson);
+
+            _icdDictionary.TryAdd(IcdTypes.FiberBoxDownIcd,FiberBoxDownDecryptor);
+            _icdDictionary.TryAdd(IcdTypes.FiberBoxUpIcd,FiberBoxUpDecryptor);
+            _icdDictionary.TryAdd(IcdTypes.FlightBoxDownIcd,FlightBoxDownDecryptor);
+            _icdDictionary.TryAdd(IcdTypes.FlightBoxUpIcd,FlightBoxUpDecryptor);
         }
 
         public void PushToBuffer(Packet packet)
@@ -87,7 +89,7 @@ namespace telemetry_device
             _pullerBlock.Post(packet);
         }
 
-        private bool IsCorrectPort(ToDecryptPacketItem toDecryptPacketItem,IcdTypes icdType)
+        private bool DistributeByPort(ToDecryptPacketItem toDecryptPacketItem,IcdTypes icdType)
         {
             return toDecryptPacketItem.PacketPort == _telemetryDeviceSettings.SimulatorDestPort+(int)icdType;
         }
@@ -183,6 +185,5 @@ namespace telemetry_device
             _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decryptTime);
             _kafkaConnection.SendStatisticsToKafka(_statAnalyze.GetDataDictionary());
         }
-
     }
 }
