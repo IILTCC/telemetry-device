@@ -15,12 +15,13 @@ namespace telemetry_device
 {
     class PipeLine
     {
-
-
         private readonly ActionBlock<Packet> _disposedPackets;
         private readonly BufferBlock<Packet> _pullerBlock;
         private readonly TransformBlock<Packet, ToDecryptPacketItem> _extractPacketData;
-        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptBlock;
+        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxUp;
+        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxDown;
+        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFlightBoxUp;
+        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFlightBoxDown;
         private readonly ActionBlock<SendToKafkaItem> _sendToKafka;
 
         private readonly ConcurrentDictionary<IcdTypes, dynamic> _icdDictionary;
@@ -40,7 +41,10 @@ namespace telemetry_device
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
             _extractPacketData = new TransformBlock<Packet, ToDecryptPacketItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
-            _decryptBlock = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
+            _decryptFiberBoxDown = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
+            _decryptFiberBoxUp = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
+            _decryptFlightBoxDown = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
+            _decryptFlightBoxUp = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
             _sendToKafka = new ActionBlock<SendToKafkaItem>(SendParamToKafka);
 
             ConfigurePipelineLinks();
@@ -49,10 +53,17 @@ namespace telemetry_device
         }
         private void ConfigurePipelineLinks()
         {
+            IcdTypes[] icdTypesArray = (IcdTypes[])Enum.GetValues(typeof(IcdTypes));
+
             _pullerBlock.LinkTo(_extractPacketData, IsPacketAppropriate);
             _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !IsPacketAppropriate(packet); });
-            _extractPacketData.LinkTo(_decryptBlock);
-            _decryptBlock.LinkTo(_sendToKafka);
+            TransformBlock<ToDecryptPacketItem,SendToKafkaItem> [] decryptors = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>[4] {_decryptFiberBoxDown,_decryptFiberBoxUp,_decryptFlightBoxDown,_decryptFlightBoxUp };
+            for (int decryptIndex = 0; decryptIndex < decryptors.Length; decryptIndex++)
+            {
+                IcdTypes icdType = icdTypesArray[decryptIndex];
+                _extractPacketData.LinkTo(decryptors[decryptIndex], (ToDecryptPacketItem toDecryptPacketItem) => { return IsCorrectPort(toDecryptPacketItem, icdType); });
+                decryptors[decryptIndex].LinkTo(_sendToKafka);
+            }
         }
 
         private void InitializeIcdDictionary()
@@ -76,6 +87,11 @@ namespace telemetry_device
             _pullerBlock.Post(packet);
         }
 
+        private bool IsCorrectPort(ToDecryptPacketItem toDecryptPacketItem,IcdTypes icdType)
+        {
+            return toDecryptPacketItem.PacketPort == _telemetryDeviceSettings.SimulatorDestPort+(int)icdType;
+        }
+        
         // returns true if includes correct dest port and correct protocol
         private bool IsPacketAppropriate(Packet packet)
         {
@@ -85,7 +101,7 @@ namespace telemetry_device
                 if (ipPacket.Protocol == ProtocolType.Udp)
                 {
                     UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                    if (udpPacket.DestinationPort == _telemetryDeviceSettings.SimulatorDestPort)
+                    if (udpPacket.DestinationPort >= _telemetryDeviceSettings.SimulatorDestPort && udpPacket.DestinationPort < (_telemetryDeviceSettings.SimulatorDestPort+Enum.GetNames(typeof(IcdTypes)).Length))
                         return true;
                 }
             }
@@ -126,11 +142,12 @@ namespace telemetry_device
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
             _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             
-            return new ToDecryptPacketItem((IcdTypes)type, packetData);
+            return new ToDecryptPacketItem((IcdTypes)type, packetData,udpPacket.DestinationPort);
         }
 
         private SendToKafkaItem DecryptPacket(ToDecryptPacketItem transformItem)
         {
+            Console.WriteLine("reached decrypt with "+transformItem.PacketPort);
             try
             {
                 DateTime beforeDecrypt = DateTime.Now;
