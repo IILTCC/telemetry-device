@@ -15,8 +15,8 @@ namespace telemetry_device
 {
     class PipeLine
     {
-        private readonly ActionBlock<Packet> _disposedPackets;
         private readonly BufferBlock<Packet> _pullerBlock;
+        private readonly ActionBlock<Packet> _disposedPackets;
         private readonly TransformBlock<Packet, ToDecryptPacketItem> _extractPacketData;
         private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxUp;
         private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxDown;
@@ -97,13 +97,16 @@ namespace telemetry_device
         // returns true if includes correct dest port and correct protocol
         private bool IsPacketAppropriate(Packet packet)
         {
+            int minPortNumber = _telemetryDeviceSettings.SimulatorDestPort;
+            int maxPortNumber = _telemetryDeviceSettings.SimulatorDestPort + Enum.GetNames(typeof(IcdTypes)).Length;
+
             IPPacket ipPacket = packet.Extract<IPPacket>();
             if (ipPacket != null)
             {
                 if (ipPacket.Protocol == ProtocolType.Udp)
                 {
                     UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                    if (udpPacket.DestinationPort >= _telemetryDeviceSettings.SimulatorDestPort && udpPacket.DestinationPort < (_telemetryDeviceSettings.SimulatorDestPort+Enum.GetNames(typeof(IcdTypes)).Length))
+                    if (udpPacket.DestinationPort >= minPortNumber && udpPacket.DestinationPort < maxPortNumber)
                         return true;
                 }
             }
@@ -115,6 +118,7 @@ namespace telemetry_device
             _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.BAD_PACKET_PRECENTAGE);
         }
 
+        // loads all the packet data to different arrays
         private void LoadByteToArray(ref byte[] packetData , ref byte[] typeBytes , ref byte[] timestampBytes,UdpPacket udpPacket)
         {
             List<byte[]> packetParams = new List<byte[]>() { typeBytes, timestampBytes, packetData };
@@ -129,17 +133,15 @@ namespace telemetry_device
             _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.GOOD_PACKET_PRECENTAGE);
 
             UdpPacket udpPacket = packet.Extract<UdpPacket>();
-            // remove header bytes
             byte[] packetData = new byte[udpPacket.PayloadData.Length - Consts.HEADER_SIZE];
             byte[] typeBytes = new byte[Consts.TYPE_SIZE];
             byte[] timestampBytes = new byte[Consts.TIMESTAMP_SIZE];
 
             LoadByteToArray(ref packetData,ref typeBytes,ref timestampBytes,udpPacket);
 
-            int type = typeBytes[0];
+            int type = typeBytes[Consts.TYPE_PLACE];
             string timestamp = Encoding.ASCII.GetString(timestampBytes);
 
-            // the format in which the timestamp is in the packet
             DateTime dateTime = DateTime.ParseExact(timestamp, Consts.TIMESTAMP_FORMAT, CultureInfo.InvariantCulture);
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
             _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
@@ -149,7 +151,6 @@ namespace telemetry_device
 
         private SendToKafkaItem DecryptPacket(ToDecryptPacketItem transformItem)
         {
-            Console.WriteLine("reached decrypt with "+transformItem.PacketPort);
             try
             {
                 DateTime beforeDecrypt = DateTime.Now;
