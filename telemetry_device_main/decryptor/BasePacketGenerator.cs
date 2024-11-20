@@ -1,11 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {
-    public abstract class BasePacketGenerator<IcdType> :IDecryptPacket where IcdType:IBaseIcd
+    public abstract class BasePacketGenerator<IcdType> :IDecryptPacket where IcdType:IParameterIcd
     {
         protected List<IcdType> _icdRows;
         protected DecryptorLogger _logger;
@@ -85,6 +86,7 @@ namespace telemetry_device_main.decryptor
             Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters = new Dictionary<string, (int, bool)>();
 
             GenerateParameters(_icdRows, ref icdParameters, packet);
+            Thread.Sleep(20);
             return icdParameters;
         }
     }
