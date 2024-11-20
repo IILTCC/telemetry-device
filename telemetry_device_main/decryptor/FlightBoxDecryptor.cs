@@ -3,7 +3,7 @@ using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {
-    public class FlightBoxDecryptor<IcdType> : BasePacketGenerator<IcdType> where IcdType:IBaseIcd
+    public class FlightBoxDecryptor<IcdType> : BasePacketGenerator<IcdType> where IcdType:IParameterIcd
     {
         public FlightBoxDecryptor(string json) : base(json) { }
 

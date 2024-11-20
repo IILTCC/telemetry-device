@@ -5,7 +5,7 @@ using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {
-    public class FiberBoxDecryptor<IcdType> : BasePacketGenerator<IcdType> where IcdType : IBaseIcd
+    public class FiberBoxDecryptor<IcdType> : BasePacketGenerator<IcdType> where IcdType : IParameterIcd
     {
         public FiberBoxDecryptor(string json) : base(json) { }
 

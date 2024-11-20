@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace telemetry_device_main.icds
+﻿namespace telemetry_device_main.icds
 {
-    public interface IBaseIcd
+    public interface IParameterIcd
     {
         public int GetRowId();
         public int GetLocation();

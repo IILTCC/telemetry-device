@@ -6,7 +6,7 @@ using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
 {
-    public abstract class BasePacketGenerator<IcdType> :IDecryptPacket where IcdType:IParameterIcd
+    public abstract class BasePacketGenerator<IcdType> : IDecryptPacket where IcdType : IParameterIcd
     {
         protected List<IcdType> _icdRows;
         protected DecryptorLogger _logger;
