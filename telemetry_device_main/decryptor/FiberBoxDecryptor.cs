@@ -17,10 +17,7 @@ namespace telemetry_device_main.decryptor
                 if (icdType.GetLocation() == -1 || (icdType.GetCorrValue() != -1 && corValue != icdType.GetCorrValue()))
                     continue;
 
-                byte[] rowValue = GetAccurateValue(icdType, packet);
-                CreateMask(icdType.GetMask(), ref rowValue[Consts.MASK_BYTE_POSITION]);
-
-                int finalValue = ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
+                int finalValue = GetFinalValue(icdType, packet);
 
                 if (icdType.IsRowCorIdentifier())
                     corValue = finalValue;
