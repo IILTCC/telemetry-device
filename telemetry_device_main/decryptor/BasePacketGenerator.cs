@@ -80,7 +80,7 @@ namespace telemetry_device_main.decryptor
         }
 
         public abstract void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet);
-        public int GetFinalValue(IcdType icdType, byte[] packet)
+        public int GetDecryptedValue(IcdType icdType, byte[] packet)
         {
             byte[] rowValue = GetAccurateValue(icdType, packet);
             CreateMask(icdType.GetMask(), ref rowValue[Consts.MASK_BYTE_POSITION]);

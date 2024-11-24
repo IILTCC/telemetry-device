@@ -14,7 +14,7 @@ namespace telemetry_device_main.decryptor
                 if (icdType.GetLocation() == -1 || (icdType.GetCorrValue() != -1))
                     continue;
 
-                int finalValue = GetFinalValue(icdType, packet);
+                int finalValue = GetDecryptedValue(icdType, packet);
 
                 icdParameters[icdType.GetName()] = (finalValue, CheckIfInRange(finalValue, icdType));
             }
