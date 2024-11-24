@@ -9,6 +9,7 @@
         public const string STATISTIC_TOPIC = "TelemetryStatistics";
         public const int TIMEOUT = 5;
         public const int TYPE_SIZE = 1;
+        public const int TYPE_PLACE = 0;
         public const int TIMESTAMP_SIZE = 24;
         public const int GOOD_PACKET_PRECENTAGE = 0;
         public const int BAD_PACKET_PRECENTAGE = 100;
