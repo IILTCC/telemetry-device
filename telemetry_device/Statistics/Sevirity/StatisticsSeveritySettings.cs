@@ -2,10 +2,10 @@
 {
     class StatisticsSeveritySettings
     {
-        public MinMaxSeverity PacketDropRate { get; set; }
-        public MinMaxSeverity KafkaUploadTime { get; set; }
-        public MinMaxSeverity SniffingTime { get; set; }
-        public MinMaxSeverity DecryptTime { get; set; }
-        public MinMaxSeverity CorruptedPacket { get; set; }
+        public SingleStatisticSeverity PacketDropRate { get; set; }
+        public SingleStatisticSeverity KafkaUploadTime { get; set; }
+        public SingleStatisticSeverity SniffingTime { get; set; }
+        public SingleStatisticSeverity DecryptTime { get; set; }
+        public SingleStatisticSeverity CorruptedPacket { get; set; }
     }
 }

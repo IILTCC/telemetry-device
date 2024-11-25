@@ -22,7 +22,6 @@ namespace telemetry_device
 
             _logger = TelemetryLogger.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
-            Console.WriteLine(statisticsSeveritySettings);
             _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection, statisticsSeveritySettings);
 
             _logger.LogInfo("Connection established to kafka");

@@ -19,7 +19,6 @@ namespace telemetry_device
 
             _telemetryDeviceSettings = _configFile.GetRequiredSection(ConfigPaths.TopLevelSettingsName).Get<TelemetryDeviceSettings>();
             _severitySettings = _configFile.GetRequiredSection(nameof(StatisticsSeveritySettings)).Get<StatisticsSeveritySettings>();
-            System.Console.WriteLine(_severitySettings);
             TelemetryDevice telemetryDevice = new TelemetryDevice(_telemetryDeviceSettings,_severitySettings);
             await telemetryDevice.RunAsync();
         }

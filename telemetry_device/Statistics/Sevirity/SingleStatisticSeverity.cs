@@ -2,7 +2,7 @@
 
 namespace telemetry_device.Statistics.Sevirity
 {
-    class MinMaxSeverity
+    class SingleStatisticSeverity
     {
         public int GoodMin { get; set; }
         public int GoodMax { get; set; }
