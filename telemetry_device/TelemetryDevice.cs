@@ -3,6 +3,7 @@ using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
 using System.Threading.Tasks;
+using telemetry_device.Statistics.Sevirity;
 using telemetry_device_main;
 
 namespace telemetry_device
@@ -14,14 +15,15 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
 
-        public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings)
+        public TelemetryDevice(TelemetryDeviceSettings telemetryDeviceSettings,StatisticsSeveritySettings statisticsSeveritySettings)
         {
             _kafkaConnection = new KafkaConnection(telemetryDeviceSettings);
             _kafkaConnection.WaitForKafkaConnection();
 
             _logger = TelemetryLogger.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
-            _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
+            Console.WriteLine(statisticsSeveritySettings);
+            _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection, statisticsSeveritySettings);
 
             _logger.LogInfo("Connection established to kafka");
         }

@@ -10,6 +10,7 @@ using telemetry_device.compactCollection;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 using telemetry_device_main;
+using telemetry_device.Statistics.Sevirity;
 
 namespace telemetry_device
 {
@@ -29,10 +30,10 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
         private readonly StatisticsAnalyzer _statAnalyze;
-        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection,StatisticsSeveritySettings statisticsSeveritySettings)
         {
             _logger = TelemetryLogger.Instance;
-            _statAnalyze = StatisticsAnalyzer.Instance;
+            _statAnalyze = StatisticsAnalyzer.Instance(statisticsSeveritySettings);
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
             _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecryptPacket>();

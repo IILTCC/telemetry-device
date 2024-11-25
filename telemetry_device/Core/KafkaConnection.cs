@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
+using telemetry_device.Statistics.CompactCollection;
 using telemetry_device_main;
 
 namespace telemetry_device
@@ -54,7 +55,7 @@ namespace telemetry_device
             SendToKafka(jsonString,topicName);
         }
 
-        public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,float> metricDict)
+        public void SendStatisticsToKafka(Dictionary<StatisticDictionaryKey,StatisticsDictionaryValue> metricDict)
         {
             string jsonString = JsonConvert.SerializeObject(metricDict);
             SendToKafka(jsonString, Consts.STATISTIC_TOPIC);
