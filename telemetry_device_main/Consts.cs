@@ -18,5 +18,6 @@
         public const int INT32_SIZE = 4;
         public const int MASK_BYTE_POSITION = 0;
         public const int MASK_BASE = 2;
+        public const string APPSETTINGS_PATH = "Settings/appsettings.json";
     }
 }
