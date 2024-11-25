@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Confluent.Kafka;
 using Newtonsoft.Json;
 using telemetry_device.compactCollection;
+using telemetry_device.Settings;
 using telemetry_device.Statistics.CompactCollection;
 using telemetry_device_main;
 
@@ -14,8 +15,10 @@ namespace telemetry_device
         private readonly IAdminClient _adminClient;
         private readonly TelemetryLogger _logger;
 
-        public KafkaConnection(TelemetryDeviceSettings telemetryDeviceSettings)
+        public KafkaConnection()
         {
+            ConfigProvider configProvider = ConfigProvider.Instance;
+            TelemetryDeviceSettings telemetryDeviceSettings = configProvider.ProvideTelemetrySettings();
             _logger = TelemetryLogger.Instance;
             ProducerConfig producerConfig = new ProducerConfig
             {

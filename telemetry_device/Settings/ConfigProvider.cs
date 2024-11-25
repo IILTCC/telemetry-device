@@ -33,7 +33,7 @@ namespace telemetry_device.Settings
         {
             return _telemetryDeviceSettings;
         }
-        public StatisticsSeveritySettings ProvideMongoSettings()
+        public StatisticsSeveritySettings ProvideStatisticSeverity()
         {
             return _statisicsSeveritySettings;
         }

@@ -4,14 +4,14 @@ namespace telemetry_device.Statistics.Sevirity
 {
     class SingleStatisticSeverity
     {
-        public int GoodMin { get; set; }
-        public int GoodMax { get; set; }
-        public int BadMin { get; set; }
-        public int BadMax { get; set; }        
-        public int NormalMin { get; set; }
-        public int NormalMax { get; set; }
+        public float GoodMin { get; set; }
+        public float GoodMax { get; set; }
+        public float BadMin { get; set; }
+        public float BadMax { get; set; }        
+        public float NormalMin { get; set; }
+        public float NormalMax { get; set; }
 
-        public StatisticsSeverity Evaluate(int value)
+        public StatisticsSeverity Evaluate(float value)
         {
             if (value >= GoodMin && value < GoodMax)
                 return StatisticsSeverity.Good;

@@ -1,21 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using telemetry_device.compactCollection;
+﻿using telemetry_device.compactCollection;
+using telemetry_device.Settings;
 using telemetry_device_main.Enums;
 
 namespace telemetry_device.Statistics.Sevirity
 {
     class SeverityEvaluator
     {
-        private StatisticsSeveritySettings _settings;
-        public SeverityEvaluator(StatisticsSeveritySettings settings)
+        private readonly StatisticsSeveritySettings _settings;
+        public SeverityEvaluator()
         {
-            _settings = settings;
+            ConfigProvider configProvider = ConfigProvider.Instance;
+            _settings = configProvider.ProvideStatisticSeverity();
         }
-        public StatisticsSeverity EvaluateSeverity(GlobalStatisticType type, int value)
+        public StatisticsSeverity EvaluateSeverity(GlobalStatisticType type, float value)
         {
             switch(type)
             {
@@ -26,7 +23,7 @@ namespace telemetry_device.Statistics.Sevirity
             }
             return StatisticsSeverity.Normal;
         }
-        public StatisticsSeverity EvaluateSeverity(IcdStatisticType type, int value)
+        public StatisticsSeverity EvaluateSeverity(IcdStatisticType type, float value)
         {
             switch (type)
             {

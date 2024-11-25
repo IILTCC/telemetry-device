@@ -30,10 +30,10 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
         private readonly StatisticsAnalyzer _statAnalyze;
-        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection,StatisticsSeveritySettings statisticsSeveritySettings)
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
         {
             _logger = TelemetryLogger.Instance;
-            _statAnalyze = StatisticsAnalyzer.Instance(statisticsSeveritySettings);
+            _statAnalyze = StatisticsAnalyzer.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
             _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecryptPacket>();
