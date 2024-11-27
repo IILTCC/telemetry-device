@@ -21,7 +21,7 @@ namespace telemetry_device.Statistics.Sevirity
                 case GlobalStatisticType.SniffingTime:
                     return _settings.SniffingTime.Evaluate(value);
             }
-            return StatisticsSeverity.Normal;
+            return StatisticsSeverity.Bad;
         }
         public StatisticsSeverity EvaluateSeverity(IcdStatisticType type, float value)
         {
@@ -34,7 +34,7 @@ namespace telemetry_device.Statistics.Sevirity
                 case IcdStatisticType.KafkaUploadTime:
                     return _settings.KafkaUploadTime.Evaluate(value);
             }
-            return StatisticsSeverity.Normal;
+            return StatisticsSeverity.Bad;
         }
     }
 }

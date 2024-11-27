@@ -3,7 +3,7 @@
     public enum StatisticsSeverity
     {
         Good,
-        Normal,
+        Warn,
         Bad
     }
 }
