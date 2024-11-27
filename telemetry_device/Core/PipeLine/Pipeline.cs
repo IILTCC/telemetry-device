@@ -10,6 +10,7 @@ using telemetry_device.compactCollection;
 using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 using telemetry_device_main;
+using telemetry_device.Statistics.Sevirity;
 
 namespace telemetry_device
 {
