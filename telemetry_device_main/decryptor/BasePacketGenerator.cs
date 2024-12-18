@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using telemetry_device_main.Enums;
 using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
@@ -19,10 +20,10 @@ namespace telemetry_device_main.decryptor
             }
             catch (Exception ex)
             {
-                _logger.LogFatal("Tried to deseralize icd -" + ex.Message);
+                _logger.LogFatal("Tried to deseralize icd -" + ex.Message,LogId.FatalDeseralize);
                 return;
             }
-            _logger.LogInfo("Succesfuly deserialized icd");
+            _logger.LogInfo("Succesfuly deserialized icd",LogId.Deseralized);
         }
 
         // takes a icd row the entire packet and returnes accurate byte array of correct length

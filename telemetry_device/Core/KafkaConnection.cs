@@ -6,6 +6,7 @@ using telemetry_device.compactCollection;
 using telemetry_device.Settings;
 using telemetry_device.Statistics.CompactCollection;
 using telemetry_device_main;
+using telemetry_device_main.Enums;
 
 namespace telemetry_device
 {
@@ -43,11 +44,11 @@ namespace telemetry_device
                 }
                 catch(KafkaException e)
                 {
-                    _logger.LogFatal("Tried connecting to kafka -"+e.Message);
+                    _logger.LogFatal("Tried connecting to kafka -"+e.Message,LogId.FatalKafkaConnection);
                 }
                 catch(Exception e) 
                 {
-                    _logger.LogFatal("Tried connecting to kafka -" + e.Message);
+                    _logger.LogFatal("Tried connecting to kafka -" + e.Message, LogId.FatalKafkaConnection);
                 }
             }
         }
