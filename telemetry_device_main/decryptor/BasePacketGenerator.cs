@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using telemetry_device_main.Enums;
 using telemetry_device_main.icds;
 
 namespace telemetry_device_main.decryptor
@@ -9,20 +10,20 @@ namespace telemetry_device_main.decryptor
     public abstract class BasePacketGenerator<IcdType> : IDecryptPacket where IcdType : IParameterIcd
     {
         protected List<IcdType> _icdRows;
-        protected DecryptorLogger _logger;
+        protected TelemetryLogger _logger;
         public BasePacketGenerator(string json)
         {
-            _logger = DecryptorLogger.Instance;
+            _logger = TelemetryLogger.Instance;
             try
             {
                 _icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
             }
             catch (Exception ex)
             {
-                _logger.LogFatal("Tried to deseralize icd -" + ex.Message);
+                _logger.LogFatal("Tried to deseralize icd -" + ex.Message,LogId.FatalDeseralize);
                 return;
             }
-            _logger.LogInfo("Succesfuly deserialized icd");
+            _logger.LogInfo("Succesfuly deserialized icd", LogId.Deseralized);
         }
 
         // takes a icd row the entire packet and returnes accurate byte array of correct length

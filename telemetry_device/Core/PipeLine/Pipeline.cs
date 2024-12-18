@@ -11,6 +11,7 @@ using telemetry_device_main.decryptor;
 using telemetry_device_main.icds;
 using telemetry_device_main;
 using telemetry_device.Statistics.Sevirity;
+using telemetry_device_main.Enums;
 
 namespace telemetry_device
 {
@@ -50,7 +51,7 @@ namespace telemetry_device
 
             ConfigurePipelineLinks();
             InitializeIcdDictionary();
-            _logger.LogInfo("Succesfuly initalized all icds");
+            _logger.LogInfo("Succesfuly initalized all icds", LogId.Initated);
         }
         private void ConfigurePipelineLinks()
         {
@@ -107,7 +108,7 @@ namespace telemetry_device
                 if (ipPacket.Protocol == ProtocolType.Udp)
                 {
                     UdpPacket udpPacket = packet.Extract<UdpPacket>();
-                    if (udpPacket.DestinationPort >= minPortNumber && udpPacket.DestinationPort < maxPortNumber)
+                    if (udpPacket!=null && udpPacket.DestinationPort >= minPortNumber && udpPacket.DestinationPort < maxPortNumber)
                         return true;
                 }
             }
@@ -164,7 +165,7 @@ namespace telemetry_device
             }
             catch (Exception ex)
             {
-                _logger.LogError("Tried decrypt and send to kafka -"+ex.Message);
+                _logger.LogError("Tried decrypt and send to kafka -"+ex.Message,LogId.ErrorDecrypt);
                 return null;
             }
         }

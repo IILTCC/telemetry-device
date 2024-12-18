@@ -19,5 +19,8 @@
         public const int MASK_BYTE_POSITION = 0;
         public const int MASK_BASE = 2;
         public const string APPSETTINGS_PATH = "Settings/appsettings.json";
+        public const string LOGGER_IP = "127.0.0.1";
+        public const string LOGGER_VARIABLE_NAME = "ProjectName";
+        public const string PROJECT_NAME = "TelemetryDevice";
     }
 }
