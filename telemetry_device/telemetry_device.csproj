@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\HealthCheck\HealthCheck.csproj" />
     <ProjectReference Include="..\telemetry_device_main\telemetry_device_main.csproj" />
   </ItemGroup>
 

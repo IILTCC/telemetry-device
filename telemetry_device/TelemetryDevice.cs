@@ -1,38 +1,53 @@
-﻿using PacketDotNet;
+﻿using HealthCheck;
+using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using telemetry_device.Settings;
 using telemetry_device_main;
+using telemetry_device_main.Enums;
 
 namespace telemetry_device
 {
     class TelemetryDevice
     {
+        private readonly HealthCheckEndPoint _healthCheck;
         private readonly PipeLine _pipeLine;
         private readonly TelemetryDeviceSettings _telemetryDeviceSettings;
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
+        private readonly HealthCheckSettings _healthCheckSettings;
         public TelemetryDevice()
         {
             ConfigProvider configProvider = ConfigProvider.Instance;
             _telemetryDeviceSettings = configProvider.ProvideTelemetrySettings();
-            _kafkaConnection = new KafkaConnection();
-            _kafkaConnection.WaitForKafkaConnection();
-
+            _healthCheckSettings = configProvider.ProvideHealthCheckSettings();
+            //_kafkaConnection = new KafkaConnection();
+            //_kafkaConnection.WaitForKafkaConnection();
+            _healthCheck = new HealthCheckEndPoint();
             _logger = TelemetryLogger.Instance;
             _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
 
-            _logger.LogInfo("Connection established to kafka");
+            _logger.LogInfo("Connection established to kafka", LogId.ConnectionSuccesful);
+            _logger.LogFatal("this is a test",LogId.FatalKafkaConnection);
+            _logger.LogFatal("this is a test",LogId.FatalKafkaReceive);
+            _logger.LogFatal("test", LogId.FatalDeseralize);
+            _logger.LogError("this is also a test",LogId.ErrorDecrypt);
         }
 
         public async Task RunAsync()
         {
-            Task.Run(() => { ListenForPackets(); });
+            //Task.Run(() => { ListenForPackets(); });
+            Task.Run(() => { _healthCheck.StartUp(_healthCheckSettings); });
+            
             // prevents program from ending
             await Task.Delay(-1);
         }
+
 
         public async Task ListenForPackets()
         {
@@ -49,7 +64,7 @@ namespace telemetry_device
 
             int readTimeoutMilliseconds = _telemetryDeviceSettings.TelemetryReadTimeout;
             device.Open(mode: DeviceModes.Promiscuous | DeviceModes.DataTransferUdp | DeviceModes.NoCaptureLocal, read_timeout: readTimeoutMilliseconds);
-            _logger.LogInfo("Starting sniffing packets");
+            _logger.LogInfo("Starting sniffing packets", LogId.StartUp);
 
             device.StartCapture();
             Console.ReadLine();
