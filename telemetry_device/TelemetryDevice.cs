@@ -26,22 +26,18 @@ namespace telemetry_device
             ConfigProvider configProvider = ConfigProvider.Instance;
             _telemetryDeviceSettings = configProvider.ProvideTelemetrySettings();
             _healthCheckSettings = configProvider.ProvideHealthCheckSettings();
-            //_kafkaConnection = new KafkaConnection();
-            //_kafkaConnection.WaitForKafkaConnection();
+            _kafkaConnection = new KafkaConnection();
+            _kafkaConnection.WaitForKafkaConnection();
             _healthCheck = new HealthCheckEndPoint();
             _logger = TelemetryLogger.Instance;
             _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
 
             _logger.LogInfo("Connection established to kafka", LogId.ConnectionSuccesful);
-            _logger.LogFatal("this is a test",LogId.FatalKafkaConnection);
-            _logger.LogFatal("this is a test",LogId.FatalKafkaReceive);
-            _logger.LogFatal("test", LogId.FatalDeseralize);
-            _logger.LogError("this is also a test",LogId.ErrorDecrypt);
         }
 
         public async Task RunAsync()
         {
-            //Task.Run(() => { ListenForPackets(); });
+            Task.Run(() => { ListenForPackets(); });
             Task.Run(() => { _healthCheck.StartUp(_healthCheckSettings); });
             
             // prevents program from ending
