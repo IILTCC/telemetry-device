@@ -1,25 +1,36 @@
 ﻿using NLog;
 using System.Reflection;
+using telemetry_device_main;
 using telemetry_device_main.Enums;
 
 namespace telemetry_device_main
 {
-    public class DecryptorLogger
+    public class TelemetryLogger
     {
-        private static DecryptorLogger _instance;
-        private readonly Logger _logger;
+        private static TelemetryLogger _instance;
         private readonly string _hostname;
-
-        private DecryptorLogger()
+        public static TelemetryLogger Instance
         {
-            _logger = LogManager.GetCurrentClassLogger();
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new TelemetryLogger();
+                }
+                return _instance;
+            }
+        }
+        private Logger _logger;
+
+        private TelemetryLogger()
+        {
             _logger = LogManager.GetCurrentClassLogger();
             ScopeContext.PushProperty(Consts.LOGGER_VARIABLE_NAME, Consts.PROJECT_NAME);
             Assembly assembly = Assembly.GetExecutingAssembly();
             _hostname = assembly.GetName().Name;
         }
 
-        public LogEventInfo ConstructLog(string log, LogId id)
+        public LogEventInfo ConstructLog(string log,LogId id)
         {
             LogEventInfo logEvent = new LogEventInfo(LogLevel.Info, _logger.Name, log)
             {
@@ -29,36 +40,24 @@ namespace telemetry_device_main
             return logEvent;
         }
 
-        public static DecryptorLogger Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new DecryptorLogger();
-                }
-                return _instance;
-            }
-        }
-
-        public void LogInfo(string log,LogId id)
+        public void LogInfo(string log, LogId id)
         {
             _logger.Info(ConstructLog(log,id));
         }
 
         public void LogWarn(string log, LogId id)
         {
-            _logger.Warn(ConstructLog(log, id));
+            _logger.Warn(ConstructLog(log,id));
         }
 
         public void LogFatal(string log, LogId id)
         {
-            _logger.Fatal(ConstructLog(log, id));
+            _logger.Fatal(ConstructLog(log,id));
         }
 
         public void LogError(string log, LogId id)
         {
-            _logger.Error(ConstructLog(log, id));
+            _logger.Error(ConstructLog(log,id));
         }
     }
 }

@@ -10,10 +10,10 @@ namespace telemetry_device_main.decryptor
     public abstract class BasePacketGenerator<IcdType> : IDecryptPacket where IcdType : IParameterIcd
     {
         protected List<IcdType> _icdRows;
-        protected DecryptorLogger _logger;
+        protected TelemetryLogger _logger;
         public BasePacketGenerator(string json)
         {
-            _logger = DecryptorLogger.Instance;
+            _logger = TelemetryLogger.Instance;
             try
             {
                 _icdRows = JsonConvert.DeserializeObject<List<IcdType>>(json);
@@ -23,7 +23,7 @@ namespace telemetry_device_main.decryptor
                 _logger.LogFatal("Tried to deseralize icd -" + ex.Message,LogId.FatalDeseralize);
                 return;
             }
-            _logger.LogInfo("Succesfuly deserialized icd",LogId.Deseralized);
+            _logger.LogInfo("Succesfuly deserialized icd", LogId.Deseralized);
         }
 
         // takes a icd row the entire packet and returnes accurate byte array of correct length
