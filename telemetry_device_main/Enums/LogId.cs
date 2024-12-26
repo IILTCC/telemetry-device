@@ -6,7 +6,7 @@
         StartUp,
         ConnectionSuccesful,
         Initated,
-        ErrorDecrypt,
+        ErrorDecode,
         FatalKafkaReceive,
         FatalKafkaConnection,
         FatalDeseralize,

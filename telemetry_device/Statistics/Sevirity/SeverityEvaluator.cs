@@ -29,8 +29,8 @@ namespace telemetry_device.Statistics.Sevirity
             {
                 case IcdStatisticType.CorruptedPacket:
                     return _settings.CorruptedPacket.Evaluate(value);
-                case IcdStatisticType.DecryptTime:
-                    return _settings.DecryptTime.Evaluate(value);
+                case IcdStatisticType.DecodeTime:
+                    return _settings.DecodeTime.Evaluate(value);
                 case IcdStatisticType.KafkaUploadTime:
                     return _settings.KafkaUploadTime.Evaluate(value);
             }

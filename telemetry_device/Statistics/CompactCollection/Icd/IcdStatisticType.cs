@@ -3,7 +3,7 @@
     enum IcdStatisticType
     {
         CorruptedPacket,
-        DecryptTime,
+        DecodeTime,
         KafkaUploadTime
     }
 }

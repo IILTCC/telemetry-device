@@ -7,11 +7,12 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
-using telemetry_device_main.decryptor;
+using telemetry_device_main.decodeor;
 using telemetry_device_main.icds;
 using telemetry_device_main;
 using telemetry_device.Statistics.Sevirity;
 using telemetry_device_main.Enums;
+using telemetry_device.Statistics.CompactCollection;
 
 namespace telemetry_device
 {
@@ -19,14 +20,14 @@ namespace telemetry_device
     {
         private readonly BufferBlock<Packet> _pullerBlock;
         private readonly ActionBlock<Packet> _disposedPackets;
-        private readonly TransformBlock<Packet, ToDecryptPacketItem> _extractPacketData;
-        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxUp;
-        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFiberBoxDown;
-        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFlightBoxUp;
-        private readonly TransformBlock<ToDecryptPacketItem, SendToKafkaItem> _decryptFlightBoxDown;
+        private readonly TransformBlock<Packet, ToDecodePacketItem> _extractPacketData;
+        private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxUp;
+        private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxDown;
+        private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFlightBoxUp;
+        private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFlightBoxDown;
         private readonly ActionBlock<SendToKafkaItem> _sendToKafka;
 
-        private readonly ConcurrentDictionary<IcdTypes, IDecryptPacket> _icdDictionary;
+        private readonly ConcurrentDictionary<IcdTypes, IDecodePacket> _icdDictionary;
         private readonly TelemetryDeviceSettings _telemetryDeviceSettings;
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
@@ -37,16 +38,16 @@ namespace telemetry_device
             _statAnalyze = StatisticsAnalyzer.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
-            _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecryptPacket>();
+            _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecodePacket>();
 
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
-            _extractPacketData = new TransformBlock<Packet, ToDecryptPacketItem>(ExtractPacketData);
+            _extractPacketData = new TransformBlock<Packet, ToDecodePacketItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
-            _decryptFiberBoxDown = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
-            _decryptFiberBoxUp = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
-            _decryptFlightBoxDown = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
-            _decryptFlightBoxUp = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>(DecryptPacket);
+            _decodeFiberBoxDown = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
+            _decodeFiberBoxUp = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
+            _decodeFlightBoxDown = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
+            _decodeFlightBoxUp = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
             _sendToKafka = new ActionBlock<SendToKafkaItem>(SendParamToKafka);
 
             ConfigurePipelineLinks();
@@ -59,12 +60,12 @@ namespace telemetry_device
 
             _pullerBlock.LinkTo(_extractPacketData, IsPacketAppropriate);
             _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !IsPacketAppropriate(packet); });
-            TransformBlock<ToDecryptPacketItem,SendToKafkaItem> [] decryptors = new TransformBlock<ToDecryptPacketItem, SendToKafkaItem>[4] {_decryptFiberBoxDown,_decryptFiberBoxUp,_decryptFlightBoxDown,_decryptFlightBoxUp };
-            for (int decryptIndex = 0; decryptIndex < decryptors.Length; decryptIndex++)
+            TransformBlock<ToDecodePacketItem,SendToKafkaItem> [] decodeors = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>[4] {_decodeFiberBoxDown,_decodeFiberBoxUp,_decodeFlightBoxDown,_decodeFlightBoxUp };
+            for (int decodeIndex = 0; decodeIndex < decodeors.Length; decodeIndex++)
             {
-                IcdTypes icdType = icdTypesArray[decryptIndex];
-                _extractPacketData.LinkTo(decryptors[decryptIndex], (ToDecryptPacketItem toDecryptPacketItem) => { return DistributeByPort(toDecryptPacketItem, icdType); });
-                decryptors[decryptIndex].LinkTo(_sendToKafka);
+                IcdTypes icdType = icdTypesArray[decodeIndex];
+                _extractPacketData.LinkTo(decodeors[decodeIndex], (ToDecodePacketItem ToDecodePacketItem) => { return DistributeByPort(ToDecodePacketItem, icdType); });
+                decodeors[decodeIndex].LinkTo(_sendToKafka);
             }
         }
 
@@ -75,15 +76,15 @@ namespace telemetry_device
             string FlightBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxDownIcd.ToString() + Consts.FILE_TYPE);
             string FlightBoxUpJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxUpIcd.ToString() + Consts.FILE_TYPE);
 
-            IDecryptPacket FiberBoxDownDecryptor = new FiberBoxDecryptor<FiberBoxDownIcd>(FiberBoxDownJson);
-            IDecryptPacket FiberBoxUpDecryptor = new FiberBoxDecryptor<FiberBoxUpIcd>(FiberBoxUpJson);
-            IDecryptPacket FlightBoxDownDecryptor = new FlightBoxDecryptor<FlightBoxDownIcd>(FlightBoxDownJson);
-            IDecryptPacket FlightBoxUpDecryptor = new FlightBoxDecryptor<FlightBoxUpIcd>(FlightBoxUpJson);
+            IDecodePacket FiberBoxDowndecodeor = new FiberBoxdecodeor<FiberBoxDownIcd>(FiberBoxDownJson);
+            IDecodePacket FiberBoxUpdecodeor = new FiberBoxdecodeor<FiberBoxUpIcd>(FiberBoxUpJson);
+            IDecodePacket FlightBoxDowndecodeor = new FlightBoxdecodeor<FlightBoxDownIcd>(FlightBoxDownJson);
+            IDecodePacket FlightBoxUpdecodeor = new FlightBoxdecodeor<FlightBoxUpIcd>(FlightBoxUpJson);
 
-            _icdDictionary.TryAdd(IcdTypes.FiberBoxDownIcd,FiberBoxDownDecryptor);
-            _icdDictionary.TryAdd(IcdTypes.FiberBoxUpIcd,FiberBoxUpDecryptor);
-            _icdDictionary.TryAdd(IcdTypes.FlightBoxDownIcd,FlightBoxDownDecryptor);
-            _icdDictionary.TryAdd(IcdTypes.FlightBoxUpIcd,FlightBoxUpDecryptor);
+            _icdDictionary.TryAdd(IcdTypes.FiberBoxDownIcd,FiberBoxDowndecodeor);
+            _icdDictionary.TryAdd(IcdTypes.FiberBoxUpIcd,FiberBoxUpdecodeor);
+            _icdDictionary.TryAdd(IcdTypes.FlightBoxDownIcd,FlightBoxDowndecodeor);
+            _icdDictionary.TryAdd(IcdTypes.FlightBoxUpIcd,FlightBoxUpdecodeor);
         }
 
         public void PushToBuffer(Packet packet)
@@ -91,9 +92,9 @@ namespace telemetry_device
             _pullerBlock.Post(packet);
         }
 
-        private bool DistributeByPort(ToDecryptPacketItem toDecryptPacketItem,IcdTypes icdType)
+        private bool DistributeByPort(ToDecodePacketItem ToDecodePacketItem,IcdTypes icdType)
         {
-            return toDecryptPacketItem.PacketPort == _telemetryDeviceSettings.SimulatorDestPort+(int)icdType;
+            return ToDecodePacketItem.PacketPort == _telemetryDeviceSettings.SimulatorDestPort+(int)icdType;
         }
         
         // returns true if includes correct dest port and correct protocol
@@ -130,7 +131,7 @@ namespace telemetry_device
                     param[paramIndex] = udpPacket.PayloadData[packetOffset++];
         }
 
-        private ToDecryptPacketItem ExtractPacketData(Packet packet)
+        private ToDecodePacketItem ExtractPacketData(Packet packet)
         {
             _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.GOOD_PACKET_PRECENTAGE);
 
@@ -148,44 +149,44 @@ namespace telemetry_device
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
             _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             
-            return new ToDecryptPacketItem((IcdTypes)type, packetData,udpPacket.DestinationPort);
+            return new ToDecodePacketItem((IcdTypes)type, packetData,udpPacket.DestinationPort);
         }
 
-        private SendToKafkaItem DecryptPacket(ToDecryptPacketItem transformItem)
+        private SendToKafkaItem DecodePacket(ToDecodePacketItem transformItem)
         {
             try
             {
-                DateTime beforeDecrypt = DateTime.Now;
-                Dictionary<string, (int paramValue, bool wasErrorFound)> decryptedParamDict = _icdDictionary[transformItem.PacketType].DecryptPacket(transformItem.PacketData);
-                int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+                DateTime beforedecode = DateTime.Now;
+                Dictionary<string, (int paramValue, bool wasErrorFound)> decodeedParamDict = _icdDictionary[transformItem.PacketType].DecodePacket(transformItem.PacketData);
+                int decodeTime = (int)DateTime.Now.Subtract(beforedecode).TotalMilliseconds;
 
-                _statAnalyze.UpdateStatistic(IcdStatisticType.DecryptTime, transformItem.PacketType, decryptTime);
-                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decryptedParamDict));
-                return new SendToKafkaItem(transformItem.PacketType,decryptedParamDict);
+                _statAnalyze.UpdateStatistic(IcdStatisticType.DecodeTime, transformItem.PacketType, decodeTime);
+                   
+                _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decodeedParamDict));
+                return new SendToKafkaItem(transformItem.PacketType,decodeedParamDict);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Tried decrypt and send to kafka -"+ex.Message,LogId.ErrorDecrypt);
+                _logger.LogError("Tried decode and send to kafka -"+ex.Message,LogId.ErrorDecode);
                 return null;
             }
         }
 
         public int CalcErrorCount(Dictionary<string, (int paramValue, bool wasErrorFound)> errorDict)
         {
-            int errorCounter = 0;
             foreach ((int paramValue, bool wasErrorFound) param in errorDict.Values)
                 if (param.wasErrorFound)
-                    errorCounter++;
-            return errorCounter;
+                    return 1;
+            return 0;
         }
 
         private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
         {
-            DateTime beforeDecrypt = DateTime.Now;
+            DateTime beforeDecode = DateTime.Now;
             _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
-            int decryptTime = (int)DateTime.Now.Subtract(beforeDecrypt).TotalMilliseconds;
+            int decodeTime = (int)DateTime.Now.Subtract(beforeDecode).TotalMilliseconds;
 
-            _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decryptTime);
+            _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decodeTime);
             _kafkaConnection.SendStatisticsToKafka(_statAnalyze.GetDataDictionary());
         }
     }
