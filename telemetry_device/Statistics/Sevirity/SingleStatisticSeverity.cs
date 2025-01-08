@@ -1,7 +1,7 @@
 ﻿using MathNet.Numerics.Distributions;
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using telemetry_device_main;
 using telemetry_device_main.Enums;
 
 namespace telemetry_device.Statistics.Sevirity
@@ -14,11 +14,11 @@ namespace telemetry_device.Statistics.Sevirity
         {
             _normal = null;
             _statisticValues = new List<double>();
-
         }
         public void SetValues(List<double> values)
         {
             _statisticValues = values;
+            _normal = new Normal(GetAvg(), GetStdDev());
         }
         public double GetAvg()
         {
@@ -39,9 +39,11 @@ namespace telemetry_device.Statistics.Sevirity
         }
         public StatisticsSeverity EvalSevirity(double value)
         {
-            if (_normal.CumulativeDistribution(value) < 0.75)
+            if (_normal == null)
+                return StatisticsSeverity.Bad;
+            if (_normal.CumulativeDistribution(value) < Consts.STATISTICS_LOWER_BOUND_NORMAL)
                 return StatisticsSeverity.Good;
-            else if (_normal.CumulativeDistribution(value) < 0.99)
+            else if (_normal.CumulativeDistribution(value) < Consts.STATISTICS_UPPER_BOUND_NORMAL)
                 return StatisticsSeverity.Warn;
             return StatisticsSeverity.Bad;
         }

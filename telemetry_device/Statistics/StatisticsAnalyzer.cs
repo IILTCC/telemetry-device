@@ -23,12 +23,11 @@ namespace telemetry_device
         }
         private readonly Dictionary<GlobalStatisticType,GlobalStatistics> _globalStatistics;
         private readonly Dictionary<IcdStatisticType,IcdStatistics> _icdStatistics;
-        //private readonly SeverityEvaluator _severityEvaluator;
         private StatisticsAnalyzer()
         {
-            //_severityEvaluator = new SeverityEvaluator();
             _globalStatistics = new Dictionary<GlobalStatisticType, GlobalStatistics>();
             _icdStatistics = new Dictionary<IcdStatisticType, IcdStatistics>();
+
             InitializeDicts();
         }
 

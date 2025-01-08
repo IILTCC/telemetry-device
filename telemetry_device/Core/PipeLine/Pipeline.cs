@@ -158,8 +158,7 @@ namespace telemetry_device
             {
                 DateTime beforedecode = DateTime.Now;
                 Dictionary<string, (int paramValue, bool wasErrorFound)> decodeedParamDict = _icdDictionary[transformItem.PacketType].DecodePacket(transformItem.PacketData);
-                int decodeTime = (int)DateTime.Now.Subtract(beforedecode).TotalMilliseconds;
-
+                double decodeTime = (double)DateTime.Now.Subtract(beforedecode).TotalMilliseconds;
                 _statAnalyze.UpdateStatistic(IcdStatisticType.DecodeTime, transformItem.PacketType, decodeTime);
                    
                 _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decodeedParamDict));
@@ -187,6 +186,7 @@ namespace telemetry_device
             int decodeTime = (int)DateTime.Now.Subtract(beforeDecode).TotalMilliseconds;
 
             _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decodeTime);
+
             _kafkaConnection.SendStatisticsToKafka(_statAnalyze.GetDataDictionary());
         }
     }
