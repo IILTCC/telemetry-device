@@ -23,7 +23,7 @@ namespace telemetry_device_main.decodeor
 
                 icdParameters[icdType.GetName()] = (finalValue, CheckIfInRange(finalValue, icdType));
             }
-            Thread.Sleep(60);
+            Thread.Sleep(30);
         }
     }
 }
