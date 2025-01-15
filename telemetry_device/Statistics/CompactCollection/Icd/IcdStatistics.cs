@@ -24,7 +24,7 @@ namespace telemetry_device.compactCollection
 
         public double GetLast(IcdTypes icdType)
         {
-            return _statistics[icdType].GetLast();
+            return _statistics[icdType].GetLastValue();
         }
         public StatisticsSeverity EvalSevirity(IcdTypes icdType, double value)
         {

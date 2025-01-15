@@ -18,7 +18,7 @@ namespace telemetry_device.Statistics.Sevirity
         public void SetValues(List<double> values)
         {
             _statisticValues = values;
-            _normal = new Normal(GetAvg(), GetStdDev());
+            _normal = new Normal(GetAvg(), GetStandardDev());
         }
         public double GetAvg()
         {
@@ -29,7 +29,7 @@ namespace telemetry_device.Statistics.Sevirity
                 return 0;
             return sum / _statisticValues.Count;
         }
-        public double GetStdDev()
+        public double GetStandardDev()
         {
             double avg = GetAvg();
             double topSum = 0;

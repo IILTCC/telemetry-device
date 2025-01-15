@@ -64,7 +64,7 @@ namespace telemetry_device
         {
             string jsonString = JsonConvert.SerializeObject(metricDict);
             JObject jsonObject = JObject.Parse(jsonString);
-            jsonObject["timestamp"] = DateTime.Now.ToString("o");
+            jsonObject[Consts.KAFKA_TIMESTAMP_NAME] = DateTime.Now.ToString(Consts.KAFKA_TIMESTAMP_FORMAT);
             jsonString = jsonObject.ToString(Formatting.None);
             SendToKafka(jsonString, Consts.STATISTIC_TOPIC);
         }

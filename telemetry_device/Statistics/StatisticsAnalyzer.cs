@@ -55,7 +55,7 @@ namespace telemetry_device
             foreach(GlobalStatisticType key in _globalStatistics.Keys)
             {
                 StatisticDictionaryKey dictionaryKey = new StatisticDictionaryKey(key);
-                double lastValue = _globalStatistics[key].GetLast();
+                double lastValue = _globalStatistics[key].GetLastValue();
                 StatisticsDictionaryValue dictionaryValue = new StatisticsDictionaryValue( _globalStatistics[key].EvalSevirity(lastValue), lastValue);
                 avgDict.Add(dictionaryKey, dictionaryValue);
             }

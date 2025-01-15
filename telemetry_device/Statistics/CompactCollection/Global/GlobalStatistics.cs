@@ -26,7 +26,7 @@ namespace telemetry_device.compactCollection
             _sum += val;
             _counter++;
         }   
-        public double GetLast()
+        public double GetLastValue()
         {
             if (_statisticValues.Count == 0)
                 return 0;

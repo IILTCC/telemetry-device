@@ -27,5 +27,7 @@
         public const int STATISTICS_NO_ITEM_SAVED = 0;
         public const double STATISTICS_LOWER_BOUND_NORMAL = 0.75;
         public const double STATISTICS_UPPER_BOUND_NORMAL = 0.99;
+        public const string KAFKA_TIMESTAMP_NAME = "timestamp";
+        public const string KAFKA_TIMESTAMP_FORMAT = "o";
     }
 }
