@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 
-namespace telemetry_device_main.decryptor
+namespace telemetry_device_main.decodeor
 {
-    public interface IDecryptPacket
+    public interface IDecodePacket
     {
-        public Dictionary<string, (int, bool)> DecryptPacket(byte[] packet);
+        public Dictionary<string, (int, bool)> DecodePacket(byte[] packet);
     }
 }

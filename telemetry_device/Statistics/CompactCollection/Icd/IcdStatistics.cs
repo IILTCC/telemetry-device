@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using telemetry_device_main.Enums;
 using telemetry_device_main.icds;
 
 namespace telemetry_device.compactCollection
@@ -16,14 +17,18 @@ namespace telemetry_device.compactCollection
             }
         }
 
-        public void AddCounter(IcdTypes icdType,int increment)
+        public void AddValue(IcdTypes icdType,double value)
         {
-            _statistics[icdType].AddCounter(increment);
+            _statistics[icdType].AddValue(value);
         }
 
-        public float GetAvg(IcdTypes icdType)
+        public double GetLast(IcdTypes icdType)
         {
-            return _statistics[icdType].GetAvg();
+            return _statistics[icdType].GetLastValue();
+        }
+        public StatisticsSeverity EvalSevirity(IcdTypes icdType, double value)
+        {
+            return _statistics[icdType].EvalSevirity(value);
         }
     }
 }

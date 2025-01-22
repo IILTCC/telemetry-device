@@ -2,8 +2,8 @@
 {
     enum IcdStatisticType
     {
-        CorruptedPacket,
-        DecryptTime,
-        KafkaUploadTime
+        CorruptedPacket, // precentage of packets containing at least one corrupted header
+        DecodeTime, // in milliseconds
+        KafkaUploadTime // in miliseconds
     }
 }

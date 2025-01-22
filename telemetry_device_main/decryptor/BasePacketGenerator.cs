@@ -5,9 +5,9 @@ using System.Threading;
 using telemetry_device_main.Enums;
 using telemetry_device_main.icds;
 
-namespace telemetry_device_main.decryptor
+namespace telemetry_device_main.decodeor
 {
-    public abstract class BasePacketGenerator<IcdType> : IDecryptPacket where IcdType : IParameterIcd
+    public abstract class BasePacketGenerator<IcdType> : IDecodePacket where IcdType : IParameterIcd
     {
         protected List<IcdType> _icdRows;
         protected TelemetryLogger _logger;
@@ -81,19 +81,18 @@ namespace telemetry_device_main.decryptor
         }
 
         public abstract void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet);
-        public int GetDecryptedValue(IcdType icdType, byte[] packet)
+        public int GetdecodeedValue(IcdType icdType, byte[] packet)
         {
             byte[] rowValue = GetAccurateValue(icdType, packet);
             CreateMask(icdType.GetMask(), ref rowValue[Consts.MASK_BYTE_POSITION]);
 
             return ConvertByteArrayToInt(rowValue, IsNegative(icdType, rowValue));
         }
-        public Dictionary<string, (int, bool)> DecryptPacket(byte[] packet)
+        public Dictionary<string, (int, bool)> DecodePacket(byte[] packet)
         {
             Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters = new Dictionary<string, (int, bool)>();
 
             GenerateParameters(_icdRows, ref icdParameters, packet);
-            Thread.Sleep(20);
             return icdParameters;
         }
     }

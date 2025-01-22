@@ -4,7 +4,6 @@ namespace telemetry_device
 {
     class Startup
     {
-
         static async Task Main(string[] args)
         {           
             TelemetryDevice telemetryDevice = new TelemetryDevice();

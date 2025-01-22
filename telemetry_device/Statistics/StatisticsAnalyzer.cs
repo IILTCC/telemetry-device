@@ -23,12 +23,11 @@ namespace telemetry_device
         }
         private readonly Dictionary<GlobalStatisticType,GlobalStatistics> _globalStatistics;
         private readonly Dictionary<IcdStatisticType,IcdStatistics> _icdStatistics;
-        private readonly SeverityEvaluator _severityEvaluator;
         private StatisticsAnalyzer()
         {
-            _severityEvaluator = new SeverityEvaluator();
             _globalStatistics = new Dictionary<GlobalStatisticType, GlobalStatistics>();
             _icdStatistics = new Dictionary<IcdStatisticType, IcdStatistics>();
+
             InitializeDicts();
         }
 
@@ -40,14 +39,14 @@ namespace telemetry_device
                 _icdStatistics.Add(statType, new IcdStatistics());
         }
 
-        public void UpdateStatistic(GlobalStatisticType statType,int value)
+        public void UpdateStatistic(GlobalStatisticType statType,double value)
         {
-            _globalStatistics[statType].AddCounter(value);
+            _globalStatistics[statType].AddValue(value);
         }
 
-        public void UpdateStatistic(IcdStatisticType statType,IcdTypes icdType,int value)
+        public void UpdateStatistic(IcdStatisticType statType,IcdTypes icdType,double value)
         {
-            _icdStatistics[statType].AddCounter(icdType, value);
+            _icdStatistics[statType].AddValue(icdType, value);
         }
 
         public Dictionary<StatisticDictionaryKey, StatisticsDictionaryValue> GetDataDictionary()
@@ -56,8 +55,8 @@ namespace telemetry_device
             foreach(GlobalStatisticType key in _globalStatistics.Keys)
             {
                 StatisticDictionaryKey dictionaryKey = new StatisticDictionaryKey(key);
-                float currentAvg = _globalStatistics[key].GetAvg();
-                StatisticsDictionaryValue dictionaryValue = new StatisticsDictionaryValue( _severityEvaluator.EvaluateSeverity(key,currentAvg), currentAvg);
+                double lastValue = _globalStatistics[key].GetLastValue();
+                StatisticsDictionaryValue dictionaryValue = new StatisticsDictionaryValue( _globalStatistics[key].EvalSevirity(lastValue), lastValue);
                 avgDict.Add(dictionaryKey, dictionaryValue);
             }
 
@@ -65,8 +64,8 @@ namespace telemetry_device
                 foreach(IcdTypes icdType in Enum.GetValues(typeof(IcdTypes)))
                 {
                     StatisticDictionaryKey dictionaryKey = new StatisticDictionaryKey(icdType,key);
-                    float currentAvg = _icdStatistics[key].GetAvg(icdType);
-                    StatisticsDictionaryValue dictionaryValue = new StatisticsDictionaryValue(_severityEvaluator.EvaluateSeverity(key, currentAvg), currentAvg);
+                    double lastValue = _icdStatistics[key].GetLast(icdType);
+                    StatisticsDictionaryValue dictionaryValue = new StatisticsDictionaryValue(_icdStatistics[key].EvalSevirity(icdType, lastValue), lastValue);
                     avgDict.Add(dictionaryKey, dictionaryValue);
                 }
             

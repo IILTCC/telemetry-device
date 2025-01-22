@@ -2,7 +2,7 @@
 {
     enum GlobalStatisticType
     {
-        SniffingTime,
-        PacketDropRate
+        SniffingTime, // in milisecond
+        PacketDropRate // precentage of dropped packets
     }
 }
