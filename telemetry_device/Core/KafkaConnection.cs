@@ -4,6 +4,7 @@ using Confluent.Kafka;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using telemetry_device.compactCollection;
+using telemetry_device.Core.PipeLine.CompactCollection;
 using telemetry_device.Settings;
 using telemetry_device.Statistics.CompactCollection;
 using telemetry_device_main;
@@ -54,9 +55,9 @@ namespace telemetry_device
             }
         }
 
-        public void SendFrameToKafka(string topicName, Dictionary<string,(int,bool)> paramDict)
+        public void SendFrameToKafka(string topicName, KafkaSendItem kafkaItem)
         {
-            string jsonString = JsonConvert.SerializeObject(paramDict);
+            string jsonString = kafkaItem.PacketTime.ToString(Consts.KAFKA_PACKET_TIME_FORMAT) + Consts.KAFKA_PACKET_SPLIT + JsonConvert.SerializeObject(kafkaItem.ParamDict);
             SendToKafka(jsonString,topicName);
         }
 
