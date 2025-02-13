@@ -29,5 +29,7 @@
         public const double STATISTICS_UPPER_BOUND_NORMAL = 0.99;
         public const string KAFKA_TIMESTAMP_NAME = "timestamp";
         public const string KAFKA_TIMESTAMP_FORMAT = "o";
+        public const string KAFKA_PACKET_TIME_FORMAT = "yyyy - MM - dd HH: mm:ss.fff";
+        public const string KAFKA_PACKET_SPLIT = "$split$";
     }
 }

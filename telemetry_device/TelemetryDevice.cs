@@ -1,4 +1,4 @@
-﻿using HealthCheck;
+using HealthCheck;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;

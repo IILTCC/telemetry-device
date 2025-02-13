@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
+using telemetry_device.Core.PipeLine.CompactCollection;
 using telemetry_device_main;
 using telemetry_device_main.decodeor;
 using telemetry_device_main.Enums;
@@ -147,7 +148,7 @@ namespace telemetry_device
             int sinffingTime = (int)DateTime.Now.Subtract(dateTime).TotalMilliseconds;
             _statAnalyze.UpdateStatistic(GlobalStatisticType.SniffingTime, sinffingTime);
             
-            return new ToDecodePacketItem((IcdTypes)type, packetData,udpPacket.DestinationPort);
+            return new ToDecodePacketItem((IcdTypes)type, packetData,udpPacket.DestinationPort,dateTime);
         }
 
         private SendToKafkaItem DecodePacket(ToDecodePacketItem transformItem)
@@ -160,7 +161,7 @@ namespace telemetry_device
                 _statAnalyze.UpdateStatistic(IcdStatisticType.DecodeTime, transformItem.PacketType, decodeTime);
                    
                 _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decodeedParamDict));
-                return new SendToKafkaItem(transformItem.PacketType,decodeedParamDict);
+                return new SendToKafkaItem(transformItem.PacketType,decodeedParamDict,transformItem.PacketTime);
             }
             catch (Exception ex)
             {
@@ -180,7 +181,8 @@ namespace telemetry_device
         private void SendParamToKafka(SendToKafkaItem sendToKafkaItem)
         {
             DateTime beforeDecode = DateTime.Now;
-            _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),sendToKafkaItem.ParamDict);
+            KafkaSendItem kafkaSend = new KafkaSendItem(sendToKafkaItem.PacketTime,sendToKafkaItem.ParamDict);
+            _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),kafkaSend);
             int decodeTime = (int)DateTime.Now.Subtract(beforeDecode).TotalMilliseconds;
 
             _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decodeTime);
