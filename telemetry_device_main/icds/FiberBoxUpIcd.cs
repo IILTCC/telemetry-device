@@ -19,6 +19,12 @@ namespace telemetry_device_main.icds
         public int Length { get; set; }
         public string Enum { get; set; }
 
+
+        public override int GetSyncSize()
+        {
+            return Consts.FIBERBOX_SYNC_SIZE;
+        }
+
         public override int GetLocation()
         {
             if (this.Location == string.Empty)

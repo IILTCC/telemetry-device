@@ -25,5 +25,12 @@ namespace telemetry_device_main.decodeor
             }
             Thread.Sleep(30);
         }
+        public override int[] SyncValues()
+        {
+            int[] syncValues = new int[Consts.FIBERBOX_SYNC_SIZE];
+            for (int icdIndex = 0; icdIndex < Consts.FIBERBOX_SYNC_SIZE; icdIndex++)
+                syncValues[icdIndex] = _icdRows[icdIndex].GetMin();
+            return syncValues;
+        }
     }
 }

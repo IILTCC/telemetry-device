@@ -31,5 +31,10 @@
         public const string KAFKA_TIMESTAMP_FORMAT = "o";
         public const string KAFKA_PACKET_TIME_FORMAT = "yyyy - MM - dd HH: mm:ss.fff";
         public const string KAFKA_PACKET_SPLIT = "$split$";
+        public const int FIBERBOX_CHECKSUM_SIZE = 1;
+        public const int FLIGHTBOX_CHECKSUM_SIZE = 1;
+        public const int FIBERBOX_SYNC_SIZE = 3;
+        public const int FLIGHTBOX_SYNC_SIZE = 1;
+        public const int CHECKSUM_TOTAL = 3;
     }
 }

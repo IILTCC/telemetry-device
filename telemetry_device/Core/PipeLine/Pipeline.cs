@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
@@ -19,6 +20,7 @@ namespace telemetry_device
     {
         private readonly BufferBlock<Packet> _pullerBlock;
         private readonly ActionBlock<Packet> _disposedPackets;
+        private readonly ActionBlock<SendToKafkaItem> _invalidPackets;
         private readonly TransformBlock<Packet, ToDecodePacketItem> _extractPacketData;
         private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxUp;
         private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxDown;
@@ -31,16 +33,19 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
         private readonly StatisticsAnalyzer _statAnalyze;
-        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings,KafkaConnection kafkaConnection)
+        private Dictionary<IcdTypes, BaseBox> _packetTypes;
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings, KafkaConnection kafkaConnection)
         {
             _logger = TelemetryLogger.Instance;
             _statAnalyze = StatisticsAnalyzer.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
             _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecodePacket>();
+            _packetTypes = new Dictionary<IcdTypes, BaseBox>();
 
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
+            _invalidPackets = new ActionBlock<SendToKafkaItem>(DisposedInvalidPackets);
             _extractPacketData = new TransformBlock<Packet, ToDecodePacketItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
             _decodeFiberBoxDown = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
@@ -51,6 +56,7 @@ namespace telemetry_device
 
             ConfigurePipelineLinks();
             InitializeIcdDictionary();
+            InitializePacketTypes();
             _logger.LogInfo("Succesfuly initalized all icds", LogId.Initated);
         }
         private void ConfigurePipelineLinks()
@@ -59,15 +65,22 @@ namespace telemetry_device
 
             _pullerBlock.LinkTo(_extractPacketData, IsPacketAppropriate);
             _pullerBlock.LinkTo(_disposedPackets, (Packet packet) => { return !IsPacketAppropriate(packet); });
-            TransformBlock<ToDecodePacketItem,SendToKafkaItem> [] decodeors = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>[4] {_decodeFiberBoxDown,_decodeFiberBoxUp,_decodeFlightBoxDown,_decodeFlightBoxUp };
+            TransformBlock<ToDecodePacketItem, SendToKafkaItem>[] decodeors = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>[4] { _decodeFiberBoxDown, _decodeFiberBoxUp, _decodeFlightBoxDown, _decodeFlightBoxUp };
             for (int decodeIndex = 0; decodeIndex < decodeors.Length; decodeIndex++)
             {
                 IcdTypes icdType = icdTypesArray[decodeIndex];
                 _extractPacketData.LinkTo(decodeors[decodeIndex], (ToDecodePacketItem ToDecodePacketItem) => { return DistributeByPort(ToDecodePacketItem, icdType); });
-                decodeors[decodeIndex].LinkTo(_sendToKafka);
+                decodeors[decodeIndex].LinkTo(_sendToKafka, FilterInvalidPackets);
+                decodeors[decodeIndex].LinkTo(_invalidPackets, (SendToKafkaItem sendToKafkaItem) => !FilterInvalidPackets(sendToKafkaItem));
             }
         }
-
+        private void InitializePacketTypes()
+        {
+            _packetTypes.TryAdd(IcdTypes.FlightBoxDownIcd, new FlightBoxDownIcd());
+            _packetTypes.TryAdd(IcdTypes.FlightBoxUpIcd, new FlightBoxUpIcd());
+            _packetTypes.TryAdd(IcdTypes.FiberBoxDownIcd, new FiberBoxDownIcd());
+            _packetTypes.TryAdd(IcdTypes.FiberBoxUpIcd, new FiberBoxUpIcd());
+        }
         private void InitializeIcdDictionary()
         {
             string FiberBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FiberBoxDownIcd.ToString() + Consts.FILE_TYPE);
@@ -159,8 +172,8 @@ namespace telemetry_device
                 Dictionary<string, (int paramValue, bool wasErrorFound)> decodeedParamDict = _icdDictionary[transformItem.PacketType].DecodePacket(transformItem.PacketData);
                 double decodeTime = (double)DateTime.Now.Subtract(beforedecode).TotalMilliseconds;
                 _statAnalyze.UpdateStatistic(IcdStatisticType.DecodeTime, transformItem.PacketType, decodeTime);
-                   
                 _statAnalyze.UpdateStatistic(IcdStatisticType.CorruptedPacket, transformItem.PacketType, CalcErrorCount(decodeedParamDict));
+
                 return new SendToKafkaItem(transformItem.PacketType,decodeedParamDict,transformItem.PacketTime);
             }
             catch (Exception ex)
@@ -169,7 +182,21 @@ namespace telemetry_device
                 return null;
             }
         }
+        private void DisposedInvalidPackets(SendToKafkaItem sendToKafkaItem) { }
+        private bool FilterInvalidPackets(SendToKafkaItem sendToKafkaItem)
+        {
 
+            for(int syncIndex = 0; syncIndex<_packetTypes[sendToKafkaItem.PacketType].GetSyncSize();syncIndex++)
+                if(sendToKafkaItem.ParamDict.ElementAt(syncIndex).Value.value != _icdDictionary[sendToKafkaItem.PacketType].SyncValues()[syncIndex])
+                    return false;
+            // calc check sum
+            int sum = 0;
+            for (int checkIndex = 0; checkIndex < Consts.CHECKSUM_TOTAL; checkIndex++)
+                sum += sendToKafkaItem.ParamDict.ElementAt(sendToKafkaItem.ParamDict.Count-checkIndex-2).Value.value;
+            if (sendToKafkaItem.ParamDict.ElementAt(sendToKafkaItem.ParamDict.Count - 1).Value.value != sum)
+                return false;
+            return true;
+        }
         public int CalcErrorCount(Dictionary<string, (int paramValue, bool wasErrorFound)> errorDict)
         {
             foreach ((int paramValue, bool wasErrorFound) param in errorDict.Values)

@@ -6,6 +6,7 @@
         public int Max { get; set; }
         public int Id { get; set; }
 
+        public abstract int GetSyncSize();
         public abstract int GetLocation();
         public abstract string GetMask();
         public abstract int GetSize();

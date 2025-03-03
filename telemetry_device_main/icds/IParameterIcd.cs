@@ -2,6 +2,7 @@
 {
     public interface IParameterIcd
     {
+        public int GetSyncSize();
         public int GetRowId();
         public int GetLocation();
         public string GetMask();

@@ -8,6 +8,10 @@
         public string Name { get; set; }
         public string StartBit { get; set; }
 
+        public override int GetSyncSize()
+        {
+            return Consts.FLIGHTBOX_SYNC_SIZE;
+        }
         public override int GetLocation() { return this.Location; }
         public override string GetMask() { return this.Mask; }
         public override int GetSize() { return this.Bit; }
