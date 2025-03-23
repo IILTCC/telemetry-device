@@ -81,6 +81,8 @@ namespace telemetry_device_main.decodeor
         }
 
         public abstract void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet);
+        public abstract int[] SyncValues();
+
         public int GetdecodeedValue(IcdType icdType, byte[] packet)
         {
             byte[] rowValue = GetAccurateValue(icdType, packet);

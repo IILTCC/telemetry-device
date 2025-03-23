@@ -7,7 +7,7 @@ namespace telemetry_device.compactCollection
     class SendToKafkaItem
     {
         public IcdTypes PacketType { get; set; }
-        public Dictionary <string,(int,bool)> ParamDict { get; set; }
+        public Dictionary <string,(int value ,bool isFaulty)> ParamDict { get; set; }
         public DateTime PacketTime { get; set; }
         public SendToKafkaItem( IcdTypes packetType, Dictionary<string,(int,bool)> paramDict, DateTime packetTime)
         {
