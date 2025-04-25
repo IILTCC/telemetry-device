@@ -53,9 +53,11 @@ namespace telemetry_device.compactCollection
         public void RestartLoop()
         {
             _sevirity.SetValues(_statisticValues);
+            double saveLast = _statisticValues[_statisticValues.Count-1];
             _statisticValues = new List<double>();
-            _sum = 0;
-            _counter = 0;
+            _statisticValues.Add(saveLast);
+            _sum = saveLast;
+            _counter = 1;
         }
         public StatisticsSeverity EvalSevirity(double value)
         {
