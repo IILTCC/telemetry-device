@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
@@ -20,7 +19,7 @@ namespace telemetry_device
     {
         private readonly BufferBlock<Packet> _pullerBlock;
         private readonly ActionBlock<Packet> _disposedPackets;
-        private readonly ActionBlock<SendToKafkaItem> _invalidPackets;
+        private readonly ActionBlock<ToDecodePacketItem> _invalidPackets;
         private readonly TransformBlock<Packet, ToDecodePacketItem> _extractPacketData;
         private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxUp;
         private readonly TransformBlock<ToDecodePacketItem, SendToKafkaItem> _decodeFiberBoxDown;
@@ -45,7 +44,7 @@ namespace telemetry_device
 
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
-            _invalidPackets = new ActionBlock<SendToKafkaItem>(DisposedInvalidPackets);
+            _invalidPackets = new ActionBlock<ToDecodePacketItem>(DisposedInvalidPackets);
             _extractPacketData = new TransformBlock<Packet, ToDecodePacketItem>(ExtractPacketData);
             _pullerBlock = new BufferBlock<Packet>();
             _decodeFiberBoxDown = new TransformBlock<ToDecodePacketItem, SendToKafkaItem>(DecodePacket);
@@ -69,9 +68,9 @@ namespace telemetry_device
             for (int decodeIndex = 0; decodeIndex < decodeors.Length; decodeIndex++)
             {
                 IcdTypes icdType = icdTypesArray[decodeIndex];
-                _extractPacketData.LinkTo(decodeors[decodeIndex], (ToDecodePacketItem ToDecodePacketItem) => { return DistributeByPort(ToDecodePacketItem, icdType); });
-                decodeors[decodeIndex].LinkTo(_sendToKafka, FilterInvalidPackets);
-                decodeors[decodeIndex].LinkTo(_invalidPackets, (SendToKafkaItem sendToKafkaItem) => !FilterInvalidPackets(sendToKafkaItem));
+                _extractPacketData.LinkTo(_invalidPackets,(ToDecodePacketItem toDecodePacketItem)=> { return !FilterInvalidPackets(toDecodePacketItem); });
+                _extractPacketData.LinkTo(decodeors[decodeIndex], (ToDecodePacketItem ToDecodePacketItem) => { return DistributeByPort(ToDecodePacketItem, icdType) && FilterInvalidPackets(ToDecodePacketItem) ; });
+                decodeors[decodeIndex].LinkTo(_sendToKafka);
             }
         }
         private void InitializePacketTypes()
@@ -182,20 +181,15 @@ namespace telemetry_device
                 return null;
             }
         }
-        private void DisposedInvalidPackets(SendToKafkaItem sendToKafkaItem) { }
-        private bool FilterInvalidPackets(SendToKafkaItem sendToKafkaItem)
+        private void DisposedInvalidPackets(ToDecodePacketItem toDecodePacketItem) 
         {
-
-            for(int syncIndex = 0; syncIndex<_packetTypes[sendToKafkaItem.PacketType].GetSyncSize();syncIndex++)
-                if(sendToKafkaItem.ParamDict.ElementAt(syncIndex).Value.value != _icdDictionary[sendToKafkaItem.PacketType].SyncValues()[syncIndex])
-                    return false;
-            // calc check sum
-            int sum = 0;
-            for (int checkIndex = 0; checkIndex < Consts.CHECKSUM_TOTAL; checkIndex++)
-                sum += sendToKafkaItem.ParamDict.ElementAt(sendToKafkaItem.ParamDict.Count-checkIndex-2).Value.value;
-            if (sendToKafkaItem.ParamDict.ElementAt(sendToKafkaItem.ParamDict.Count - 1).Value.value != sum)
-                return false;
-            return true;
+            _statAnalyze.UpdateStatistic(GlobalStatisticType.PacketDropRate, Consts.BAD_PACKET_PRECENTAGE);
+        }
+        private bool FilterInvalidPackets(ToDecodePacketItem toDecodePacketItem)
+        {
+            bool syncCheck = _icdDictionary[toDecodePacketItem.PacketType].ValidateSync(toDecodePacketItem.PacketData);
+            bool checkSum = _icdDictionary[toDecodePacketItem.PacketType].ValidateCheckSum(toDecodePacketItem.PacketData);
+            return syncCheck && checkSum;
         }
         public int CalcErrorCount(Dictionary<string, (int paramValue, bool wasErrorFound)> errorDict)
         {

@@ -81,8 +81,25 @@ namespace telemetry_device_main.decodeor
         }
 
         public abstract void GenerateParameters(List<IcdType> icdRows, ref Dictionary<string, (int paramValue, bool wasErrorFound)> icdParameters, byte[] packet);
-        public abstract int[] SyncValues();
+        public int GetSingleValue(int rowNumber, byte[] packet)
+        {
+            if (_icdRows[rowNumber].GetLocation() == -1)
+                return 0;
 
+            int finalValue = GetdecodeedValue(_icdRows[rowNumber], packet);
+            return finalValue;
+        }
+        public abstract bool ValidateSync(byte[] packet);
+        public bool ValidateCheckSum(byte[] packet)
+        {
+            int sum = 0;
+            for (int checkIndex = 0; checkIndex < Consts.CHECKSUM_TOTAL; checkIndex++)
+                sum+=GetSingleValue(_icdRows.Count - checkIndex - 2,packet);
+            
+            if (GetSingleValue(_icdRows.Count - 1, packet) != sum)
+                return false;
+            return true;
+        }
         public int GetdecodeedValue(IcdType icdType, byte[] packet)
         {
             byte[] rowValue = GetAccurateValue(icdType, packet);

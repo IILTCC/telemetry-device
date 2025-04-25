@@ -19,12 +19,12 @@ namespace telemetry_device_main.decodeor
                 icdParameters[icdType.GetName()] = (finalValue, CheckIfInRange(finalValue, icdType));
             }
         }
-        public override int[] SyncValues()
+        public override bool ValidateSync(byte[] packet)
         {
-            int[] syncValues = new int[Consts.FLIGHTBOX_SYNC_SIZE];
             for (int icdIndex = 0; icdIndex < Consts.FLIGHTBOX_SYNC_SIZE; icdIndex++)
-                syncValues[icdIndex] = _icdRows[icdIndex].GetMin();
-            return syncValues;
+                if (GetSingleValue(icdIndex, packet) != _icdRows[icdIndex].GetMin())
+                    return false;
+            return true;
         }
     }
 }
