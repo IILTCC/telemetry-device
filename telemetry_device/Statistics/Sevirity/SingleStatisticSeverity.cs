@@ -37,10 +37,20 @@ namespace telemetry_device.Statistics.Sevirity
                 topSum += Math.Pow((val - avg), 2);
             return Math.Sqrt(topSum / (_statisticValues.Count - 1));
         }
+        public bool CheckIfEqual() 
+        {
+            for(int valueIndex = 1; valueIndex<_statisticValues.Count; valueIndex++)
+                if (_statisticValues[valueIndex - 1] != _statisticValues[valueIndex])
+                    return false;
+            
+            return true;
+        }
         public StatisticsSeverity EvalSevirity(double value)
         {
             if (_normal == null)
                 return StatisticsSeverity.Bad;
+            if (CheckIfEqual())
+                return StatisticsSeverity.Good;
             if (_normal.CumulativeDistribution(value) < Consts.STATISTICS_LOWER_BOUND_NORMAL)
                 return StatisticsSeverity.Good;
             else if (_normal.CumulativeDistribution(value) < Consts.STATISTICS_UPPER_BOUND_NORMAL)
