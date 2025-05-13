@@ -1,4 +1,4 @@
-﻿using PacketDotNet;
+using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -204,6 +204,7 @@ namespace telemetry_device
             DateTime beforeDecode = DateTime.Now;
             KafkaSendItem kafkaSend = new KafkaSendItem(sendToKafkaItem.PacketTime,sendToKafkaItem.ParamDict);
             _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),kafkaSend);
+            Thread.Sleep(10);
             int decodeTime = (int)DateTime.Now.Subtract(beforeDecode).TotalMilliseconds;
 
             _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decodeTime);

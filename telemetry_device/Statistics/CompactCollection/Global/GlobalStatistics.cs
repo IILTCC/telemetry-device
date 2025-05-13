@@ -12,6 +12,7 @@ namespace telemetry_device.compactCollection
         private double _counter;
         private List<double> _statisticValues;
         private SingleStatisticSeverity _sevirity;
+        private bool _isNewData = false;
         public GlobalStatistics()
         {
             _statisticValues = new List<double>();
@@ -20,11 +21,13 @@ namespace telemetry_device.compactCollection
             _counter = 0;
             Task.Run(() => Loop());
             Task.Run(()=>PullSaved());
+            Task.Run(()=> DeadTimer());
         }
         public void AddValue(double val)
         {
             _sum += val;
             _counter++;
+            _isNewData = true;
         }   
         public double GetLastValue()
         {
@@ -37,7 +40,7 @@ namespace telemetry_device.compactCollection
             while (true)
             {
                 await Task.Delay(Consts.STATISTICS_UPDATE_DELAY);
-                if (_counter == 0)
+                if (_counter ==0)
                     _statisticValues.Add(Consts.STATISTICS_NO_ITEM_SAVED);
                 else _statisticValues.Add(_sum / _counter);
             }
@@ -48,6 +51,20 @@ namespace telemetry_device.compactCollection
             {
                 await Task.Delay(Consts.STATISTICS_RESET_DELAY);
                 RestartLoop();
+            }
+        }
+        public async Task DeadTimer()
+        {
+            while(true)
+            {
+                await Task.Delay(Consts.DEAD_STATISTIC_TIMER);
+                if(!_isNewData)
+                {
+                    _statisticValues = new List<double>();
+                    _sum = 0;
+                    _counter = 0;
+                }
+                _isNewData = false;
             }
         }
         public void RestartLoop()

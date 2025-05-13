@@ -36,5 +36,6 @@
         public const int FIBERBOX_SYNC_SIZE = 3;
         public const int FLIGHTBOX_SYNC_SIZE = 1;
         public const int CHECKSUM_TOTAL = 3;
+        public const int DEAD_STATISTIC_TIMER = 5000;
     }
 }
