@@ -26,6 +26,6 @@
 {"Id":"25","Location":"10","Name":"Comm Fail","Mask":"01000000","StartBit":"7","Bit":"1","Min":"0","Max":"1"},
 {"Id":"26","Location":"10","Name":"Busy","Mask":"10000000","StartBit":"8","Bit":"1","Min":"0","Max":"1"},
 {"Id":"27","Location":"11","Name":"Stick Throttle","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"},
-{"Id":"28","Location":"12","Name":"Cal Data","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"},
+{"Id":"28","Location":"12","Name":"Cal Data","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"100"},
 {"Id":"29","Location":"13","Name":"ChckSum","Mask":"","StartBit":"","Bit":"8","Min":"0","Max":"255"}
 ]

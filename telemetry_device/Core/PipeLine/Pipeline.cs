@@ -1,12 +1,14 @@
-﻿using PacketDotNet;
+using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks.Dataflow;
 using telemetry_device.compactCollection;
+using telemetry_device.Core.Factory;
 using telemetry_device.Core.PipeLine.CompactCollection;
 using telemetry_device_main;
 using telemetry_device_main.decodeor;
@@ -32,15 +34,15 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
         private readonly StatisticsAnalyzer _statAnalyze;
-        private Dictionary<IcdTypes, BaseBox> _packetTypes;
-        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings, KafkaConnection kafkaConnection)
+        private readonly DecoderFactory _decoderFactory;
+        public PipeLine(TelemetryDeviceSettings telemetryDeviceSettings, KafkaConnection kafkaConnection, DecoderFactory decoderFactory)
         {
+            _decoderFactory = decoderFactory;
             _logger = TelemetryLogger.Instance;
             _statAnalyze = StatisticsAnalyzer.Instance;
             _telemetryDeviceSettings = telemetryDeviceSettings;
             _kafkaConnection = kafkaConnection;
             _icdDictionary = new ConcurrentDictionary<IcdTypes, IDecodePacket>();
-            _packetTypes = new Dictionary<IcdTypes, BaseBox>();
 
             // acts as clearing buffer endpoint for unwanted packets 100 acts as precentage for bad packed
             _disposedPackets = new ActionBlock<Packet>(DisposedPackets);
@@ -55,7 +57,6 @@ namespace telemetry_device
 
             ConfigurePipelineLinks();
             InitializeIcdDictionary();
-            InitializePacketTypes();
             _logger.LogInfo("Succesfuly initalized all icds", LogId.Initated);
         }
         private void ConfigurePipelineLinks()
@@ -73,29 +74,10 @@ namespace telemetry_device
                 decodeors[decodeIndex].LinkTo(_sendToKafka);
             }
         }
-        private void InitializePacketTypes()
-        {
-            _packetTypes.TryAdd(IcdTypes.FlightBoxDownIcd, new FlightBoxDownIcd());
-            _packetTypes.TryAdd(IcdTypes.FlightBoxUpIcd, new FlightBoxUpIcd());
-            _packetTypes.TryAdd(IcdTypes.FiberBoxDownIcd, new FiberBoxDownIcd());
-            _packetTypes.TryAdd(IcdTypes.FiberBoxUpIcd, new FiberBoxUpIcd());
-        }
         private void InitializeIcdDictionary()
         {
-            string FiberBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FiberBoxDownIcd.ToString() + Consts.FILE_TYPE);
-            string FiberBoxUpJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FiberBoxUpIcd.ToString() + Consts.FILE_TYPE);
-            string FlightBoxDownJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxDownIcd.ToString() + Consts.FILE_TYPE);
-            string FlightBoxUpJson = File.ReadAllText(Consts.REPO_PATH + IcdTypes.FlightBoxUpIcd.ToString() + Consts.FILE_TYPE);
-
-            IDecodePacket FiberBoxDowndecodeor = new FiberBoxdecodeor<FiberBoxDownIcd>(FiberBoxDownJson);
-            IDecodePacket FiberBoxUpdecodeor = new FiberBoxdecodeor<FiberBoxUpIcd>(FiberBoxUpJson);
-            IDecodePacket FlightBoxDowndecodeor = new FlightBoxdecodeor<FlightBoxDownIcd>(FlightBoxDownJson);
-            IDecodePacket FlightBoxUpdecodeor = new FlightBoxdecodeor<FlightBoxUpIcd>(FlightBoxUpJson);
-
-            _icdDictionary.TryAdd(IcdTypes.FiberBoxDownIcd,FiberBoxDowndecodeor);
-            _icdDictionary.TryAdd(IcdTypes.FiberBoxUpIcd,FiberBoxUpdecodeor);
-            _icdDictionary.TryAdd(IcdTypes.FlightBoxDownIcd,FlightBoxDowndecodeor);
-            _icdDictionary.TryAdd(IcdTypes.FlightBoxUpIcd,FlightBoxUpdecodeor);
+            foreach(IcdTypes icdType in Enum.GetValues(typeof(IcdTypes)))
+                _icdDictionary.TryAdd(icdType, _decoderFactory.Create(icdType));
         }
 
         public void PushToBuffer(Packet packet)
@@ -204,6 +186,7 @@ namespace telemetry_device
             DateTime beforeDecode = DateTime.Now;
             KafkaSendItem kafkaSend = new KafkaSendItem(sendToKafkaItem.PacketTime,sendToKafkaItem.ParamDict);
             _kafkaConnection.SendFrameToKafka(sendToKafkaItem.PacketType.ToString(),kafkaSend);
+            Thread.Sleep(10);
             int decodeTime = (int)DateTime.Now.Subtract(beforeDecode).TotalMilliseconds;
 
             _statAnalyze.UpdateStatistic(IcdStatisticType.KafkaUploadTime,sendToKafkaItem.PacketType, decodeTime);
