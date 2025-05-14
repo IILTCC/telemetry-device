@@ -4,6 +4,7 @@ using SharpPcap;
 using SharpPcap.LibPcap;
 using System;
 using System.Threading.Tasks;
+using telemetry_device.Core.Factory;
 using telemetry_device.Settings;
 using telemetry_device_main;
 using telemetry_device_main.Enums;
@@ -18,17 +19,18 @@ namespace telemetry_device
         private readonly KafkaConnection _kafkaConnection;
         private readonly TelemetryLogger _logger;
         private readonly HealthCheckSettings _healthCheckSettings;
+        private readonly DecoderFactory _decoderFactory;
         public TelemetryDevice()
         {
             ConfigProvider configProvider = ConfigProvider.Instance;
+            _decoderFactory = new DecoderFactory();
             _telemetryDeviceSettings = configProvider.ProvideTelemetrySettings();
             _healthCheckSettings = configProvider.ProvideHealthCheckSettings();
             _kafkaConnection = new KafkaConnection();
             _kafkaConnection.WaitForKafkaConnection();
             _healthCheck = new HealthCheckEndPoint();
             _logger = TelemetryLogger.Instance;
-            _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection);
-
+            _pipeLine = new PipeLine(_telemetryDeviceSettings,_kafkaConnection,_decoderFactory);
             _logger.LogInfo("Connection established to kafka", LogId.ConnectionSuccesful);
         }
 
